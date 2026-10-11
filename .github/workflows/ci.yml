@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x64
+            os: ubuntu-24.04
+            artifact: linux-x64
+          - name: Windows x64
+            os: windows-2025
+            artifact: windows-x64
+          - name: macOS Apple Silicon
+            os: macos-15
+            artifact: macos-arm64
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build pkg-config libx11-dev libxft-dev fonts-dejavu-core
+
+      - name: Configure CMake
+        shell: bash
+        run: cmake -S . -B build-ci -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/stage"
+
+      - name: Build
+        run: cmake --build build-ci --config Release --parallel 2
+
+      - name: Run tests
+        run: ctest --test-dir build-ci -C Release --output-on-failure
+
+      - name: Stage plugin
+        run: cmake --install build-ci --config Release
+
+      - name: Upload unsigned build
+        uses: actions/upload-artifact@v4
+        with:
+          name: FUZZBOI-${{ matrix.artifact }}
+          path: stage/
+          if-no-files-found: error
+          retention-days: 14
+
+  coverage:
+    name: Line coverage (Linux)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build pkg-config libx11-dev libxft-dev gcovr
+      - name: Configure with coverage
+        run: cmake -S . -B build-cov -G Ninja -DCMAKE_BUILD_TYPE=Debug -DFUZZBOI_COVERAGE=ON
+      - name: Build and test
+        run: cmake --build build-cov && ctest --test-dir build-cov --output-on-failure
+      - name: Report
+        run: gcovr --root . --filter 'src/' --exclude 'src/ui/canvas_.*' --exclude 'src/ui/backends.hpp' --print-summary --xml coverage.xml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.xml

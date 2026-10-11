@@ -1,0 +1,41 @@
+# CMake build trees and generated files. Prebuilt binaries live on the GitHub Releases page.
+/build/
+/build-*/
+/cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+CTestTestfile.cmake
+cmake_install.cmake
+compile_commands.json
+
+# Compiled output
+*.a
+*.clap
+*.dll
+*.dylib
+*.o
+*.obj
+*.so
+
+# Test, coverage and profiling output
+Testing/
+*.gcda
+*.gcno
+*.profraw
+*.profdata
+coverage/
+
+# Rendered audio and harvested sample downloads (the manifest is tracked, the audio is not)
+*.wav
+!tests/fixtures/**/*.wav
+assets/samples/raw/
+
+# Local editor and OS metadata
+.DS_Store
+.idea/
+.vscode/
+*~
+*.swp
+
+# Python bytecode from the tools and their tests
+__pycache__/

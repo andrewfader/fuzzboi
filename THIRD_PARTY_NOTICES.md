@@ -1,0 +1,47 @@
+# Third-party notices
+
+## ymfm
+
+FUZZBOI's FM source uses Aaron Giles' `ymfm` Yamaha FM sound cores (the YM2151 / OPM device),
+pinned to commit `81aec25ccbb98f4873a255f7551ac4dadac59b4a` and fetched unmodified at configure
+time by CMake.
+
+Copyright (c) 2021, Aaron Giles. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted
+provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this list of conditions
+   and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright notice, this list of
+   conditions and the following disclaimer in the documentation and/or other materials provided
+   with the distribution.
+3. Neither the name of the copyright holder nor the names of its contributors may be used to
+   endorse or promote products derived from this software without specific prior written
+   permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR
+IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+## CLAP
+
+The CLAP headers (free-audio/clap, tag 1.2.7) are fetched at configure time. MIT License,
+Copyright (c) 2021 Alexandre BIQUE.
+
+## Freeverb tunings
+
+The chamber reverb (`src/dsp/fx/echoes.hpp`, `Chamber`) uses the comb and allpass lengths of
+Jezar at Dreampoint's Freeverb, which was placed in the public domain. The implementation is
+FUZZBOI's own.
+
+## Editor engine
+
+The platform-neutral editor (`src/ui/editor.hpp`, the canvases and window backends, and the
+CLAP test harness) is adapted from the same author's YANES project in this workspace, under the
+same source-available licence as this repository.

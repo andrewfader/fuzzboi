@@ -1,0 +1,76 @@
+name: Release
+
+# Pushing a version tag builds, tests and packages the plug-in for Linux, Windows and macOS and
+# attaches the archives to a GitHub release. The builds are unsigned.
+on:
+  push:
+    tags: ['v[0-9]*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to (re)build and publish
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - name: Linux x64
+            os: ubuntu-22.04
+            package: linux-x64
+            configure: '"-DCMAKE_MODULE_LINKER_FLAGS=-static-libstdc++ -static-libgcc"'
+          - name: Windows x64
+            os: windows-2025
+            package: windows-x64
+            configure: ''
+          - name: macOS universal
+            os: macos-15
+            package: macos-universal
+            configure: '-DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build pkg-config libx11-dev libxft-dev fonts-dejavu-core
+      - name: Configure
+        shell: bash
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$PWD/stage" ${{ matrix.configure }}
+      - name: Build
+        run: cmake --build build --config Release --parallel 2
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Stage
+        run: cmake --install build --config Release
+      - name: Package
+        shell: bash
+        run: |
+          cd stage
+          if [ "$RUNNER_OS" = Windows ]; then 7z a "../FUZZBOI-${{ matrix.package }}.zip" .; else zip -r "../FUZZBOI-${{ matrix.package }}.zip" .; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FUZZBOI-${{ matrix.package }}
+          path: FUZZBOI-${{ matrix.package }}.zip
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          files: artifacts/**/*.zip
+          generate_release_notes: true
