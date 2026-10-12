@@ -111,6 +111,7 @@ fuzzboi_test(dsp_tests)
 fuzzboi_test(sources_tests)
 fuzzboi_test(fx_tests)
 fuzzboi_test(engine_tests)
+fuzzboi_test(guitar_tests)
 
 # Suites that load the built .clap and drive it through the public CLAP interfaces, as a host does.
 function(fuzzboi_plugin_test name)
@@ -145,6 +146,12 @@ target_compile_features(fuzzboi-preset-audit PRIVATE cxx_std_20)
 target_include_directories(fuzzboi-preset-audit PRIVATE src tests)
 target_link_libraries(fuzzboi-preset-audit PRIVATE fuzzboi_core)
 fuzzboi_warnings(fuzzboi-preset-audit)
+
+# Renders single notes of the physical guitar for tools/guitar_critic.py; a review tool, not a test.
+add_executable(fuzzboi-guitar-render tools/guitar_render.cpp)
+target_compile_features(fuzzboi-guitar-render PRIVATE cxx_std_20)
+target_include_directories(fuzzboi-guitar-render PRIVATE src)
+fuzzboi_warnings(fuzzboi-guitar-render)
 
 if(FUZZBOI_EDITOR AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
   # The plug-in side of the editor (host, gestures, relevance, artwork) compiled with the plug-in

@@ -11,6 +11,7 @@ this directory, and a test without a scenario is a bug in the test.
 | sound_sources.feature | `sources_tests` |
 | effects.feature | `fx_tests` |
 | engine.feature | `engine_tests` |
+| guitar.feature | `guitar_tests` |
 | clap_plugin.feature | `plugin_smoke`, `note_tests`, `state_tests` |
 | advertised_parameters.feature | `advertised_tests` |
 | editor.feature | `ui_tests`, `frontend_tests` (Linux) |

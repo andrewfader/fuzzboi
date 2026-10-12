@@ -69,12 +69,15 @@ enum ParamId : uint32_t {
   kJanglePick, kJangleBody, kCabinet, kCabType,
   // --- appended in the fourth round: the shimmer reverb ---------------------------------------------
   kVerbShimmer,
+  // --- appended in the fifth round: the physically modelled guitar ----------------------------------
+  kGuitarModel, kGuitarTuning, kGuitarCapo, kGuitarPluck, kGuitarPick, kGuitarPickup, kGuitarMute,
+  kGuitarAge, kGuitarPosition,
   kParamCount
 };
 
 // How a value is shown to the musician. Stepped parameters with names draw from an option table.
 enum class Unit : uint8_t {
-  Plain, Ms, Seconds, Percent, Db, Hz, Semitones, Cents, Count, Options
+  Plain, Ms, Seconds, Percent, Db, Hz, Semitones, Cents, Count, Options, Mm
 };
 
 struct ParamSpec {
@@ -88,15 +91,15 @@ struct ParamSpec {
 
 // --- option tables -------------------------------------------------------------------------------
 
-constexpr int kSourceCount = 13;
+constexpr int kSourceCount = 14;
 constexpr const char* kSourceNames[kSourceCount] = {
     "Combo organ", "Analog synth", "FM electric", "Tape keys", "Toy piano", "Music box",
     "Electric jug", "Theremin", "Singing saw", "Plastic piccolo", "Stylophone",
-    "Jangle 12-string", "Collage sampler"};
+    "Jangle 12-string", "Collage sampler", "Physical guitar"};
 enum Source : int {
   kSourceOrgan, kSourceSynth, kSourceFm, kSourceTape, kSourceToyPiano, kSourceMusicBox,
   kSourceJug, kSourceTheremin, kSourceSaw, kSourcePiccolo, kSourceStylophone, kSourceJangle,
-  kSourceCollage
+  kSourceCollage, kSourceGuitar
 };
 
 constexpr const char* kVoiceModeNames[] = {"Poly", "Mono", "Legato"};
@@ -120,7 +123,13 @@ constexpr const char* kChordTypeNames[kChordTypeCount] = {
 constexpr const char* kChordVoicingNames[] = {"Close", "Drop 2", "Open", "Wide"};
 constexpr const char* kChorusModeNames[] = {"Juno I", "Juno II", "I+II", "Ensemble", "Flanger"};
 constexpr const char* kCabTypeNames[] = {"Tweed", "British", "Top boost"};
-constexpr int kPresetCount = 90;  // The names live in presets.hpp; the table only needs the size.
+// The physical guitar (src/dsp/guitar.hpp): which instrument, how it is tuned, and where the
+// pickups are. The order matches dsp::guitar::Model, kTunings and PickupSelect.
+constexpr int kGuitarModelCount = 4;
+constexpr const char* kGuitarModelNames[kGuitarModelCount] = {"Steel dreadnought", "Nylon classical", "Single-coil solid", "Humbucker solid"};
+constexpr const char* kGuitarTuningNames[] = {"Standard", "Drop D", "Half step down", "DADGAD", "Open G", "Open D", "Open E", "Open C"};
+constexpr const char* kGuitarPickupNames[] = {"Neck", "Middle", "Bridge", "Neck+bridge"};
+constexpr int kPresetCount = 123;  // The names live in presets.hpp; the table only needs the size.
 
 constexpr std::array<ParamSpec, kParamCount> kSpecs{{
     // voice
@@ -287,6 +296,16 @@ constexpr std::array<ParamSpec, kParamCount> kSpecs{{
     {"Cabinet type", "Pedals/Cabinet", 0, 2, 1, true, Unit::Options, kCabTypeNames},
     // shimmer
     {"Shimmer", "Reverb/Chamber", 0, 1, 0, false, Unit::Percent, nullptr},
+    // physical guitar
+    {"Guitar", "Guitar", 0, kGuitarModelCount - 1, 0, true, Unit::Options, kGuitarModelNames},
+    {"Tuning", "Guitar", 0, 7, 0, true, Unit::Options, kGuitarTuningNames},
+    {"Capo", "Guitar", 0, 12, 0, true, Unit::Count, nullptr},
+    {"Pluck point", "Guitar/Right hand", 20, 300, 90, false, Unit::Mm, nullptr},
+    {"Pick", "Guitar/Right hand", 0, 1, 0.6, false, Unit::Percent, nullptr},
+    {"Pickup", "Guitar", 0, 3, 0, true, Unit::Options, kGuitarPickupNames},
+    {"Palm mute", "Guitar/Right hand", 0, 1, 0, false, Unit::Percent, nullptr},
+    {"String age", "Guitar", 0, 1, 0, false, Unit::Percent, nullptr},
+    {"Hand position", "Guitar/Left hand", 0, 12, 0, true, Unit::Count, nullptr},
 }};
 
 // The preset parameter's value names come from the preset table, which lives above this header
@@ -326,6 +345,7 @@ inline bool format_value(uint32_t id, double value, char* out, uint32_t capacity
     case Unit::Semitones: std::snprintf(out, capacity, s.stepped ? "%+.0f st" : "%+.2f st", value); break;
     case Unit::Cents: std::snprintf(out, capacity, s.min < 0 ? "%+.0f ct" : "%.0f ct", value); break;
     case Unit::Count: std::snprintf(out, capacity, "%.0f", value); break;
+    case Unit::Mm: std::snprintf(out, capacity, "%.0f mm", value); break;
     case Unit::Plain:
       if (s.stepped && s.min == 0 && s.max == 1) std::snprintf(out, capacity, value >= 0.5 ? "On" : "Off");
       else if (id == kSampleRoot) {

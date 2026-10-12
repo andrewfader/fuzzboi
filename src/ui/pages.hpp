@@ -71,6 +71,11 @@ inline std::vector<PageSpec> fuzzboi_pages() {
       // The whole page is artwork: the visualizer, no parameters.
       {"VISUALS", "A MilkDrop-style light show driven by the output, after LOAMP's visualizer  \xe2\x80\xa2  \xe2\x97\x80 \xe2\x96\xb6 RANDOM AUTO pick presets", theme::pink, 3,
        content_bottom - strip_y, {}},
+      {"GUITAR", "A physically modelled guitar: real strings, frets and tunings on a dreadnought, a classical or two solid bodies", theme::amber, 3, 0,
+       {{"Instrument", 0, {menu(kGuitarModel, 3), menu(kGuitarTuning, 3), knob(kGuitarCapo), knob(kGuitarAge)}},
+        {"Right hand", 1, {knob(kGuitarPluck), knob(kGuitarPick), knob(kGuitarMute)}},
+        {"Pickups", 2, {menu(kGuitarPickup, 2)}},
+        {"Left hand", 2, {knob(kGuitarPosition)}}}},
   };
 }
 
@@ -176,6 +181,10 @@ inline const char* fuzzboi_short_name(int id) {
     case kVerbDamp: return "Damping";
     case kVerbPredelay: return "Predelay";
     case kVerbShimmer: return "Shimmer";
+    case kGuitarPluck: return "Pluck";
+    case kGuitarMute: return "Mute";
+    case kGuitarAge: return "Age";
+    case kGuitarPosition: return "Position";
     case kWall: return "Amount";
     case kWallChamber: return "Chamber";
     case kWallSquash: return "Squash";
@@ -223,6 +232,7 @@ inline bool page_relevant_for_source(int page, int source) {
     case 2: return source == kSourceSynth;
     case 3: return source == kSourceFm;
     case 4: return source == kSourceTape || source == kSourceCollage;
+    case 10: return source == kSourceGuitar;
     default: return true;
   }
 }

@@ -76,11 +76,12 @@ void report_level(const char* what, Settings s) {
 
 int print_levels() {
   for (int src = 0; src < params::kSourceCount; ++src) {
-    if (src == params::kSourceFm || src == params::kSourceTape) continue;
+    if (src == params::kSourceFm || src == params::kSourceTape || src == params::kSourceGuitar) continue;
     Settings s = Settings::defaults(); s.v[params::kSource] = src; report_level(params::kSourceNames[src], s);
   }
   for (int bank = 0; bank < params::kTapeBankCount; ++bank) { Settings s = Settings::defaults(); s.v[params::kSource] = params::kSourceTape; s.v[params::kTapeBank] = bank; report_level(params::kTapeBankNames[bank], s); }
   for (int patch = 0; patch < params::kFmPatchCount; ++patch) { Settings s = Settings::defaults(); s.v[params::kSource] = params::kSourceFm; s.v[params::kFmPatch] = patch; report_level(params::kFmPatchNames[patch], s); }
+  for (int model = 0; model < params::kGuitarModelCount; ++model) { Settings s = Settings::defaults(); s.v[params::kSource] = params::kSourceGuitar; s.v[params::kGuitarModel] = model; report_level(params::kGuitarModelNames[model], s); }
   return 0;
 }
 

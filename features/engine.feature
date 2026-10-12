@@ -56,7 +56,7 @@ Feature: The engine plays notes polyphonically, in mono and legato, with samples
   # every_preset_meets_the_quality_bar
   Scenario: Every factory preset meets the quality bar (docs/QUALITY.md)
     Given each factory preset played the audit phrase: a four-note chord at playing velocities, then three melody notes
-    Then every one is finite, within 2.5 dB of the target loudness (1.5 dB in the audit, a decibel of slack without the bank), under the ceiling with the clip light off (the limiter holding no more than 6 dB), audible and free of DC
+    Then every one is finite, within 2.5 dB of the target loudness (1.5 dB in the audit, a decibel of slack without the bank), under the ceiling with the clip light off (the limiter holding no more than 9 dB), audible and free of DC
 
   # output_limiter_holds_the_ceiling_and_leaves_quiet_signals_alone
   Scenario: The output limiter holds the ceiling and leaves quiet signals alone

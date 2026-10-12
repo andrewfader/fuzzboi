@@ -756,8 +756,9 @@ class Editor {
       const bool active = i == page_, hover = hover_.target == Target::Tab && hover_.index == i;
       p.round_rect(r, 8, active ? panel_hi : (hover ? 0x152232 : panel));
       char label[48]{};
-      std::snprintf(label, sizeof(label), "%02d  %s", i + 1, pages_[static_cast<size_t>(i)].tab);
-      p.text(r.x + 12, r.y + 31, label, active ? text : (hover ? soft : muted), r.w - 20, TextSize::Small);
+      // Eleven tabs share the strip: one space after the number keeps every name whole.
+      std::snprintf(label, sizeof(label), "%02d %s", i + 1, pages_[static_cast<size_t>(i)].tab);
+      p.text(r.x + 10, r.y + 31, label, active ? text : (hover ? soft : muted), r.w - 14, TextSize::Small);
     }
     // One indicator that slides between tabs and takes the colour of the page it lands on.
     const Rect from = tab_rect(static_cast<int>(std::floor(tab_position_)));

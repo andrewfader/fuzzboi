@@ -118,7 +118,7 @@ SCENARIO(parameter_automation_changes_the_sound_and_flush_works_offline) {
   WHEN("an out-of-range value arrives");
   set_param(plugin, P::kMasterDb, 500.0);
   THEN("it is clamped to the declared range");
-  CHECK(param(plugin, P::kMasterDb) == 6.0, "clamped");
+  CHECK(param(plugin, P::kMasterDb) == P::spec(P::kMasterDb).max, "clamped");
   plugin->destroy(plugin);
 }
 

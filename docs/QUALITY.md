@@ -16,7 +16,7 @@ slack on each side.
 | Measurement | Bar | Why |
 |---|---|---|
 | Loudness (the loudest 400 ms of the phrase, BS.1770 momentary, K-weighted, mono sum) | -16 LUFS, within 1.5 dB | Presets sit at one level under the fingers: the ear judges a chord or a note by its loudest moment, not by its peak sample, so a fuzz drone (crest 4 dB) and a strummed 12-string (crest 20 dB) are matched here rather than on the meter |
-| Limiter | the output limiter (ceiling -2 dBFS, instant attack, 120 ms release) reduces by no more than 6 dB anywhere in the phrase; the clip flag (the mix crossing 0 dBFS before the limiter) stays clear | Plucked and struck presets reach the target by letting the limiter catch their pick transients; a preset that needs more than that is being squashed and should be voiced louder instead |
+| Limiter | the output limiter (ceiling -2 dBFS, instant attack, 50 ms release) reduces by no more than 9 dB anywhere in the phrase; the clip flag (the mix crossing 0 dBFS before the limiter) stays clear | Plucked and struck presets reach the target by letting the limiter catch their pick transients; a preset that needs more than that is being squashed and should be voiced louder instead |
 | Level of the held chord | above -34 dBFS RMS for sustaining sources; plucked and struck sources are judged on their loudness above | A chord that drops out of the mix is not playable |
 | Melody notes | within 14 dB of the chord's peak | Single notes must not vanish next to a chord (a unison or chord-machine stack must not be the only loud thing) |
 | DC offset of the held chord | below -40 dBFS | Asymmetric fuzz and FM patches leak DC that thumps on note edges |

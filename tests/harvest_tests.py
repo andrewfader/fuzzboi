@@ -79,6 +79,7 @@ def main() -> int:
     harvest.audio_files = fake_audio_files
     harvest.download = fake_download
     harvest.convert = fake_convert
+    harvest.ffmpeg_available = lambda: True  # the fake convert needs no ffmpeg, so neither does the test machine
     out = Path(tempfile.mkdtemp(prefix="fuzzboi-harvest-"))
     try:
         print("  When   the tool runs against a fake archive")

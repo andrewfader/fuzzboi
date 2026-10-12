@@ -37,6 +37,11 @@ bool gui_param_relevant(const Plugin* p, clap_id id) {
   if (id == kSawBow) return source == kSourceSaw;
   if (id == kPiccoloBreath || id == kPiccoloChaos) return source == kSourcePiccolo;
   if (id >= kJangleOctave && id <= kJangleDecay) return source == kSourceJangle;
+  if (id >= kGuitarModel && id <= kGuitarPosition) {
+    // Pickups only on the electrics; a capo or a hand position is the same on all four.
+    if (id == kGuitarPickup) return source == kSourceGuitar && value(kGuitarModel) >= 2.0;
+    return source == kSourceGuitar;
+  }
   switch (id) {
     case kGlideMs: return static_cast<int>(value(kVoiceMode)) != 0 || source == kSourceTheremin || source == kSourceSaw;
     case kUnisonDetune: case kStereoSpread: return value(kUnison) >= 2.0 && static_cast<int>(value(kVoiceMode)) == 0;
@@ -170,6 +175,15 @@ const char* gui_help(clap_id id) {
     case kVerbDamp: return "How quickly the chamber's highs die.";
     case kVerbPredelay: return "Gap before the reverb starts.";
     case kVerbShimmer: return "Feeds the chamber's tail back an octave up, so it climbs into a glassy halo: the shimmer reverb.";
+    case kGuitarModel: return "Which guitar: a Martin-style steel dreadnought, a nylon classical, a Strat-style single-coil or a Les Paul-style humbucker, each with its real scale, strings and body or pickups.";
+    case kGuitarTuning: return "The open strings: standard, drop D, half a step down, DADGAD, open G, D, E or C. Each key is fretted where a guitarist would play it.";
+    case kGuitarCapo: return "A capo at this fret: the open strings sound higher and notes below them move up an octave.";
+    case kGuitarPluck: return "Where the string is plucked, in mm from the saddle: near the bridge is thin and twangy, over the soundhole or neck is round and hollow.";
+    case kGuitarPick: return "What plucks: the flesh of a finger (soft, round) to a hard plectrum (bright, with a scrape).";
+    case kGuitarPickup: return "Which pickup the electric's selector picks: neck, middle, bridge or neck and bridge together.";
+    case kGuitarMute: return "Palm muting: the side of the hand resting on the strings by the saddle chokes the ring to a thump.";
+    case kGuitarAge: return "From new strings (bright, long-ringing) to dead ones whose upper partials die almost at once.";
+    case kGuitarPosition: return "The fretting hand's position: notes are fingered within four frets of here, so higher positions play on thicker strings further up the neck.";
     case kWall: return "Wall of sound: doubling, chamber send and squash, all at once.";
     case kWallChamber: return "How much of the wall goes to the echo chamber.";
     case kWallSquash: return "How hard the compressor squashes the wall.";

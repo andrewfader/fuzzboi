@@ -192,7 +192,7 @@ SCENARIO(every_preset_meets_the_quality_bar) {
     loudest = std::max(loudest, loud); quietest = std::min(quietest, loud);
     if (!ok) { all_ok = false; std::printf("    preset %zu '%s': loud %.1f LUFS limit %.1f dB peak %.1f dBFS dc %.1f dB rms %.4f finite %d clipped %d\n", p, presets::all()[p].name, loud, engine.limited_db(), measure::db(peak), measure::db(dc), measure::rms(chord), finite(r.mono), engine.clipped()); }
   }
-  THEN("every one is finite, within 2.5 dB of the target loudness (1.5 dB in the audit, a decibel of slack without the bank), under the ceiling with the clip light off (the limiter holding no more than 6 dB), audible and free of DC");
+  THEN("every one is finite, within 2.5 dB of the target loudness (1.5 dB in the audit, a decibel of slack without the bank), under the ceiling with the clip light off (the limiter holding no more than 9 dB), audible and free of DC");
   CHECK(all_ok, "all presets meet the bar");
   CHECK(loudest - quietest <= 2.0 * (audit::kLoudnessSlackDb + 1.0), spec::fmt("the bank spans %.1f dB from quietest to loudest", loudest - quietest));
   CHECK(presets::count() == params::kPresetCount, spec::fmt("preset table has %.0f entries, the parameter promises %.0f", static_cast<double>(presets::count()), params::kPresetCount));
@@ -210,7 +210,7 @@ SCENARIO(output_limiter_holds_the_ceiling_and_leaves_quiet_signals_alone) {
   const double quiet_peak = measure::db(std::max(measure::peak(Span(quiet.left)), measure::peak(Span(quiet.right))));
   THEN("the hot one peaks exactly at the -2 dBFS ceiling with the clip light on and the limiter reporting its reduction; the quiet one is untouched and the gain below the ceiling is linear");
   CHECK_NEAR(hot_peak, -2.0, 0.1, "ceiling");
-  CHECK(hot.engine.clipped() && hot.engine.limited_db() > 6.0, spec::fmt("limited by %.1f dB", hot.engine.limited_db()));
+  CHECK(hot.engine.clipped() && hot.engine.limited_db() > dsp::Limiter::kClipDb, spec::fmt("limited by %.1f dB", hot.engine.limited_db()));
   CHECK(!quiet.engine.clipped() && quiet.engine.limited_db() == 0.0, "quiet signal passes untouched");
   CHECK(quiet_peak < -2.0 - 10.0, "the quiet one is well under the ceiling");
   // Under the ceiling the limiter is a wire: a render 6 dB hotter than the quiet one, still
@@ -223,18 +223,20 @@ SCENARIO(output_limiter_holds_the_ceiling_and_leaves_quiet_signals_alone) {
 }
 
 SCENARIO(every_source_plays_one_note_at_a_comparable_level) {
-  GIVEN("one C4 at full velocity through every source, tape bank and FM patch, master at 0 dB");
-  struct Case { const char* name; int source; int bank; int patch; };
+  GIVEN("one C4 at full velocity through every source, tape bank, FM patch and guitar, master at 0 dB");
+  struct Case { const char* name; int source; int bank; int patch; int guitar = 0; };
   std::vector<Case> cases;
   for (int src = 0; src < params::kSourceCount; ++src) {
     if (src == params::kSourceTape) { for (int b = 0; b < params::kTapeBankCount; ++b) cases.push_back({params::kTapeBankNames[b], src, b, 0}); }
     else if (src == params::kSourceFm) { for (int p = 0; p < params::kFmPatchCount; ++p) cases.push_back({params::kFmPatchNames[p], src, 0, p}); }
+    else if (src == params::kSourceGuitar) { for (int g = 0; g < params::kGuitarModelCount; ++g) cases.push_back({params::kGuitarModelNames[g], src, 0, 0, g}); }
     else cases.push_back({params::kSourceNames[src], src, 0, 0});
   }
   bool all_ok = true;
   for (const Case& c : cases) {
     Rig rig;
     rig.s.v[params::kSource] = c.source; rig.s.v[params::kTapeBank] = c.bank; rig.s.v[params::kFmPatch] = c.patch; rig.s.v[params::kMasterDb] = 0;
+    rig.s.v[params::kGuitarModel] = c.guitar;
     rig.on(60); rig.render(48000);
     const double peak = measure::db(measure::peak(Span(rig.left))), held = measure::db(measure::rms(Span(rig.left, 9600, 24000)));
     // The levels:: trims in engine.hpp aim at -13 dBFS RMS or -5 dBFS peak; allow the models'

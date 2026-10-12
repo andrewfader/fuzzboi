@@ -148,8 +148,10 @@ inline std::shared_ptr<Sample> generate_found_sound(uint32_t seed, double rate, 
     if (tick >= 1.0) tick -= 1.0;
     if (tick < 0.004) x += rng.bipolar() * 0.5f;
     const double stop = std::max(0.0, (t - (seconds - 0.5)) / 0.5);
-    // Lifted to sit where a harvested sample normalised to -3 dBFS sits.
-    sample->frames[i] = static_cast<float>(x * (1.0 - stop) * 1.25);
+    // Scaled to sit where the harvested bank sits: its WAVs peak at -3 dBFS but hold around
+    // -23 dBFS RMS, and the audit phrase through the collage presets lands at the same loudness
+    // with either (tests/engine_tests.cpp every_preset_meets_the_quality_bar).
+    sample->frames[i] = static_cast<float>(x * (1.0 - stop) * 0.75);
   }
   return sample;
 }

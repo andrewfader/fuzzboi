@@ -21,6 +21,7 @@
 #include "dsp/fx/echoes.hpp"
 #include "dsp/fx/master.hpp"
 #include "dsp/fx/pedals.hpp"
+#include "dsp/guitar.hpp"
 #include "dsp/organ.hpp"
 #include "dsp/sampler.hpp"
 #include "dsp/strings.hpp"
@@ -69,9 +70,13 @@ constexpr std::array<double, params::kSourceCount> kSourceDb{
     -4.5,  // Stylophone
     -1.0,  // jangle 12-string
     0.0,   // collage sampler (samples arrive normalised; the found sounds carry their own gain)
+    0.0,   // physical guitar (see kGuitarModelDb)
 };
 constexpr std::array<double, params::kFmPatchCount> kFmPatchDb{3.5, 5.0, 2.0, 8.5, 6.5, 1.0, 6.5, 1.0};
 constexpr std::array<double, params::kTapeBankCount> kTapeBankDb{-1.0, 5.5, 5.0, 0.0};
+// The guitar's output is a radiated pressure or a pickup voltage in its own units; these bring
+// each instrument to the same footing as the other sources.
+constexpr std::array<double, params::kGuitarModelCount> kGuitarModelDb{0.0, 10.8, 0.0, 0.0};
 inline double gain(const std::array<double, params::kSourceCount>& table, int index) {
   return dsp::db_to_gain(table[static_cast<size_t>(std::clamp(index, 0, params::kSourceCount - 1))]);
 }
@@ -106,6 +111,14 @@ class Voice {
   uint64_t age() const { return age_; }
   int source() const { return source_; }
   int fm_channel() const { return fm_channel_; }
+  // The guitar string this voice is fretting (-1: none, or it was taken by a later note).
+  int guitar_string() const { return guitar_string_; }
+  void drop_string() { guitar_string_ = -1; }
+  // The pitch the voice wants as a multiple of the note its string is fretted at: glide, bend,
+  // vibrato, fine tune and unison detune, which the guitar applies to the string.
+  double pitch_ratio() const { return pitch_ratio_; }
+  // Released while the sustain pedal holds it.
+  bool sustained() const { return sustained_; }
   double pan() const { return pan_; }
 
   struct Start {
@@ -114,6 +127,7 @@ class Voice {
     std::shared_ptr<const dsp::Sample> sample; uint32_t seed;
     int trigger = -1;     // the played key (defaults to `key`)
     double gain = 1.0;    // unison voices share the level of one
+    int guitar_string = -1, guitar_note = -1;  // where the guitar fretted the note
   };
 
   void start(const Settings& s, const Start& in) {
@@ -121,6 +135,7 @@ class Voice {
     channel_ = in.channel; note_ = in.key; note_id_ = in.note_id; velocity_ = in.velocity; age_ = in.age;
     detune_cents_ = in.detune_cents; pan_ = in.pan; fm_channel_ = in.fm_channel;
     trigger_ = in.trigger >= 0 ? in.trigger : in.key; gain_ = in.gain;
+    guitar_string_ = in.guitar_string; guitar_note_ = in.guitar_note; pitch_ratio_ = 1.0;
     held_ = true; active_ = true; sustained_ = false; samples_ = 0;
     source_ = s.source();
     const double hz = dsp::midi_to_hz(in.key);
@@ -161,7 +176,7 @@ class Voice {
   }
   // The pedal came up: a voice that was held by it now releases.
   void pedal_up() { if (sustained_ && !held_) { sustained_ = false; amp_.note_off(); synth_.note_off(); } }
-  void kill() { active_ = false; held_ = false; sustained_ = false; amp_.kill(); note_ = -1; trigger_ = -1; fm_channel_ = -1; }
+  void kill() { active_ = false; held_ = false; sustained_ = false; amp_.kill(); note_ = -1; trigger_ = -1; fm_channel_ = -1; guitar_string_ = -1; }
   void retune(double hz) { glide_.target(hz); }
 
   // Renders one mono sample. `bend` is in semitones, `wheel` 0..1 adds vibrato.
@@ -184,6 +199,10 @@ class Voice {
       case params::kSourceOrgan: out = organ_.next(organ_settings(s), hz); break;
       case params::kSourceSynth: out = synth_.next(synth_settings(s), hz, note); break;
       case params::kSourceFm: out = 0.0f; break;  // rendered by the chip, mixed by the engine
+      case params::kSourceGuitar:  // the strings are the engine's; the voice steers its string's pitch
+        pitch_ratio_ = hz / dsp::midi_to_hz(note_ + s[params::kTranspose]);
+        out = 0.0f;
+        break;
       case params::kSourceTape: out = render_tape(s, hz); break;
       case params::kSourceToyPiano: case params::kSourceMusicBox: out = modal_.next(modal_settings(s)); break;
       case params::kSourceJug: out = jug_.next(jug_settings(s), hz); break;
@@ -269,7 +288,8 @@ class Voice {
   int32_t note_id_ = -1;
   double velocity_ = 1.0, detune_cents_ = 0.0, pan_ = 0.0, gain_ = 1.0;
   uint64_t age_ = 0, samples_ = 0;
-  int source_ = 0, fm_channel_ = -1;
+  int source_ = 0, fm_channel_ = -1, guitar_string_ = -1, guitar_note_ = -1;
+  double pitch_ratio_ = 1.0;
   bool active_ = false, held_ = false, sustained_ = false;
   dsp::Adsr amp_;
   dsp::Smoother glide_;
@@ -293,6 +313,40 @@ class Voice {
 
 // --- the engine ----------------------------------------------------------------------------------
 
+// Samples cross from the main thread to the audio thread through these. libc++ (Apple) has no
+// std::atomic<std::shared_ptr>, so it gets the equivalent free functions instead.
+#if defined(__cpp_lib_atomic_shared_ptr)
+template <class T>
+using AtomicSharedPtr = std::atomic<std::shared_ptr<T>>;
+#else
+template <class T>
+class AtomicSharedPtr {
+ public:
+  void store(std::shared_ptr<T> p) {
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+    std::atomic_store(&ptr_, std::move(p));
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
+  }
+  std::shared_ptr<T> load() const {
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+    return std::atomic_load(&ptr_);
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
+  }
+ private:
+  std::shared_ptr<T> ptr_;
+};
+#endif
+
 class Engine {
  public:
   void prepare(double rate) {
@@ -315,6 +369,7 @@ class Engine {
     for (auto& l : lofi_) l.prepare(rate);
     for (auto& m : machine_) m.prepare(rate);
     feedback_.prepare(rate);
+    guitar_.prepare(rate);
     pump_.prepare(rate);
     limiter_.prepare(rate);
     master_.set_time(10.0, rate);
@@ -332,6 +387,7 @@ class Engine {
     shimmer_.clear();
     shimmer_back_ = 0.0f;
     feedback_.clear();
+    guitar_.reset();
     pump_.reset();
     limiter_.reset();
     bend_.fill(0.0); wheel_.fill(0.0); sustain_.fill(false);
@@ -396,7 +452,12 @@ class Engine {
       // Mono and legato: one voice per chord note, retriggered (mono) or glided into (legato)
       // while held; everything else is silenced.
       const bool legato = mode == 2 && voices_[0].active() && voices_[0].held();
-      for (int i = n; i < kVoices; ++i) if (voices_[static_cast<size_t>(i)].active()) voices_[static_cast<size_t>(i)].kill();
+      for (int i = n; i < kVoices; ++i) {
+        Voice& extra = voices_[static_cast<size_t>(i)];
+        if (!extra.active()) continue;
+        if (extra.guitar_string() >= 0) guitar_.release(extra.guitar_string(), 0.05);
+        extra.kill();
+      }
       for (int i = 0; i < n; ++i) {
         Voice& v = voices_[static_cast<size_t>(i)];
         start_voice(s, v, channel, notes[i], note_id, velocity, 0.0, 0.0, legato && v.active(), key, 1.0);
@@ -445,20 +506,35 @@ class Engine {
       const bool pedal = sustain_[static_cast<size_t>(std::clamp<int>(v.channel(), 0, 15))];
       v.release(pedal);
       if (v.source() == params::kSourceFm && v.fm_channel() >= 0 && !pedal) fm_.note_off(v.fm_channel());
+      if (v.guitar_string() >= 0) {
+        // The fretting hand lets go: damped over the release time, or left ringing on the pedal.
+        if (pedal) guitar_.let_ring(v.guitar_string());
+        else { guitar_.release(v.guitar_string(), s[params::kReleaseMs] * 0.001); v.drop_string(); }
+      }
     }
   }
   void all_notes_off() {
-    for (auto& v : voices_) { if (v.active() && v.held()) { v.release(false); if (v.fm_channel() >= 0) fm_.note_off(v.fm_channel()); } }
+    for (auto& v : voices_) {
+      if (v.active() && v.held()) { v.release(false); if (v.fm_channel() >= 0) fm_.note_off(v.fm_channel()); }
+      if (v.guitar_string() >= 0) { guitar_.release(v.guitar_string(), 0.1); v.drop_string(); }
+    }
     held_keys_.fill(false);
     held_count_ = 0;
     pending_count_ = 0;
   }
-  void all_sound_off() { for (auto& v : voices_) v.kill(); fm_in_use_.fill(false); fm_.reset(); held_keys_.fill(false); held_count_ = 0; pending_count_ = 0; }
+  void all_sound_off() { for (auto& v : voices_) v.kill(); fm_in_use_.fill(false); fm_.reset(); guitar_.reset(); held_keys_.fill(false); held_count_ = 0; pending_count_ = 0; }
   int pending_notes() const { return pending_count_; }
   void sustain(int16_t channel, bool down) {
     const size_t ch = static_cast<size_t>(std::clamp<int>(channel, 0, 15));
     sustain_[ch] = down;
-    if (!down) for (auto& v : voices_) if (v.channel() == channel) { v.pedal_up(); if (v.active() && !v.held() && v.fm_channel() >= 0) fm_.note_off(v.fm_channel()); }
+    if (!down)
+      for (auto& v : voices_)
+        if (v.channel() == channel) {
+          const bool was_held_by_pedal = v.sustained() && !v.held();
+          v.pedal_up();
+          if (v.active() && !v.held() && v.fm_channel() >= 0) fm_.note_off(v.fm_channel());
+          if (was_held_by_pedal && v.guitar_string() >= 0) { guitar_.release(v.guitar_string(), release_s_); v.drop_string(); }
+        }
   }
   void pitch_bend(int16_t channel, double semitones_scaled) { bend_[static_cast<size_t>(std::clamp<int>(channel, 0, 15))] = semitones_scaled; }
   void mod_wheel(int16_t channel, double amount) { wheel_[static_cast<size_t>(std::clamp<int>(channel, 0, 15))] = amount; }
@@ -466,7 +542,9 @@ class Engine {
   double tempo() const { return tempo_; }
 
   int active_voices() const { int n = 0; for (const auto& v : voices_) n += v.active(); return n; }
-  bool silent() const { return active_voices() == 0 && !fm_.any_keyed(); }
+  bool silent() const { return active_voices() == 0 && !fm_.any_keyed() && !guitar_.awake(); }
+  // The physical guitar, for inspection (tests, the critic).
+  const dsp::guitar::Guitar& guitar() const { return guitar_; }
   float peak_left() const { return peak_l_; }
   float peak_right() const { return peak_r_; }
   bool clipped() const { return clipped_; }
@@ -492,6 +570,11 @@ class Engine {
     const int unison = std::clamp(static_cast<int>(s[params::kUnison]), 1, 4);
     const auto chorus_mode = static_cast<dsp::ChorusMode>(std::clamp(static_cast<int>(s[params::kChorusMode]), 0, 4));
     const auto cab_type = static_cast<dsp::CabType>(std::clamp(static_cast<int>(s[params::kCabType]), 0, 2));
+    guitar_.configure(guitar_setup(s));
+    release_s_ = s[params::kReleaseMs] * 0.001;
+    const float guitar_trim = static_cast<float>(
+        dsp::db_to_gain(levels::kGuitarModelDb[static_cast<size_t>(std::clamp(static_cast<int>(s[params::kGuitarModel]), 0, params::kGuitarModelCount - 1))]) *
+        levels::gain(levels::kSourceDb, params::kSourceGuitar));
     for (uint32_t i = 0; i < frames; ++i) {
       // Strummed chord notes whose moment has come.
       for (int p = 0; p < pending_count_;) {
@@ -508,7 +591,7 @@ class Engine {
         if (!v.active()) continue;
         const size_t ch = static_cast<size_t>(std::clamp<int>(v.channel(), 0, 15));
         const float mono = v.render(s, bend_[ch] * bend_range, wheel_[ch], tempo_);
-        if (!v.active() && v.source() == params::kSourceFm) { /* killed this sample */ }
+        if (v.guitar_string() >= 0) guitar_.set_ratio(v.guitar_string(), v.pitch_ratio());
         // Constant-power pan from the unison spread.
         const double angle = (v.pan() * 0.5 + 0.5) * dsp::kPi * 0.5;
         l += mono * static_cast<float>(std::cos(angle));
@@ -517,6 +600,9 @@ class Engine {
       // The FM chip renders all its channels at once; voices only drive its registers.
       const float fm_out = fm_.render() * fm_trim;
       l += fm_out; r += fm_out;
+      // So does the guitar: six strings and one body, whichever voices are fretting them.
+      const float guitar_out = guitar_.render() * guitar_trim;
+      l += guitar_out; r += guitar_out;
       // Pedals and tape: mono effects run once per side so unison width survives.
       const float mono = (l + r) * 0.5f;
       const float howl = feedback_.process(mono, s[params::kFeedbackAmount], static_cast<int>(s[params::kFeedbackHarmonic]), s[params::kFeedbackSwell], feedback_hz) - mono;
@@ -595,6 +681,9 @@ class Engine {
     if (s.source() == params::kSourceJangle) seconds = std::max(seconds, s[params::kJangleDecay]);
     if (s.source() == params::kSourceToyPiano || s.source() == params::kSourceMusicBox) seconds = std::max(seconds, 3.0);
     if (s.source() == params::kSourceFm) seconds = std::max(seconds, 4.0);
+    // Released strings are damped over the release time; the open strings ringing in sympathy
+    // with them fall away with them.
+    if (s.source() == params::kSourceGuitar) seconds = std::max(seconds, s[params::kReleaseMs] * 0.001 + 1.0);
     if (s[params::kEchoMix] > 0.0) {
       const double fb = std::min(0.98, s[params::kEchoFeedback]);
       const double repeats = fb > 1e-6 ? 1.0 + std::ceil(std::log(1e-4) / std::log(fb)) : 1.0;
@@ -612,6 +701,20 @@ class Engine {
   double division_seconds(int division) const {
     static constexpr double kBeats[7] = {0.25, 1.0 / 3.0, 0.5, 2.0 / 3.0, 1.0, 2.0, 4.0};
     return 60.0 / tempo_ * kBeats[std::clamp(division, 0, 6)];
+  }
+
+  static dsp::guitar::Setup guitar_setup(const Settings& s) {
+    dsp::guitar::Setup g;
+    g.model = static_cast<int>(std::lround(s[params::kGuitarModel]));
+    g.tuning = static_cast<int>(std::lround(s[params::kGuitarTuning]));
+    g.capo = static_cast<int>(std::lround(s[params::kGuitarCapo]));
+    g.pluck_m = s[params::kGuitarPluck] * 0.001;
+    g.hardness = s[params::kGuitarPick];
+    g.pickup = static_cast<int>(std::lround(s[params::kGuitarPickup]));
+    g.mute = s[params::kGuitarMute];
+    g.age = s[params::kGuitarAge];
+    g.position = static_cast<int>(std::lround(s[params::kGuitarPosition]));
+    return g;
   }
 
   static dsp::FmControls fm_controls(const Settings& s) {
@@ -639,6 +742,7 @@ class Engine {
     for (auto& v : voices_) if (v.releasing() && (!best || v.age() < best->age())) best = &v;
     if (!best) for (auto& v : voices_) if (!best || v.age() < best->age()) best = &v;
     if (best->fm_channel() >= 0) { fm_.note_off(best->fm_channel()); fm_in_use_[static_cast<size_t>(best->fm_channel())] = false; }
+    if (best->guitar_string() >= 0) guitar_.release(best->guitar_string(), 0.05);
     best->kill();
     return *best;
   }
@@ -683,7 +787,36 @@ class Engine {
       fm_.note_off(v.fm_channel());
       fm_in_use_[static_cast<size_t>(v.fm_channel())] = false;
     }
+    if (source == params::kSourceGuitar) start_guitar(s, v, start, legato);
+    else if (v.active() && v.guitar_string() >= 0) guitar_.release(v.guitar_string(), 0.05);
     v.start(s, start);
+  }
+
+  // Frets and plucks the guitar for a voice. A legato note on the string the voice already holds
+  // is a hammer-on or pull-off (a slide with glide), if the string reaches it; anything else is a
+  // fresh pluck where the fingering puts it, which chokes whatever that string was sounding.
+  void start_guitar(const Settings& s, Voice& v, Voice::Start& start, bool legato) {
+    guitar_.configure(guitar_setup(s));
+    const int note = start.key + static_cast<int>(std::lround(s[params::kTranspose]));
+    const double strength = 1.0 - s[params::kVelocitySens] * (1.0 - start.velocity);
+    if (legato && v.active() && v.guitar_string() >= 0 && guitar_.held(v.guitar_string())) {
+      const int string = v.guitar_string();
+      const int fret = note - guitar_.open_note(string);
+      if (fret >= guitar_.setup().capo && fret <= guitar_.guitar().frets) {
+        guitar_.legato(string, fret, strength, s[params::kGlideMs] > 0.0);
+        start.guitar_string = string;
+        start.guitar_note = note;
+        return;
+      }
+    }
+    // A mono retrigger moves the hand off the old note.
+    if (v.active() && v.guitar_string() >= 0) { guitar_.release(v.guitar_string(), 0.05); v.drop_string(); }
+    const auto f = guitar_.finger(note);
+    if (f.string < 0) return;
+    for (auto& other : voices_) if (&other != &v && other.guitar_string() == f.string) other.drop_string();
+    guitar_.pluck(f.string, f.fret, strength, start.seed);
+    start.guitar_string = f.string;
+    start.guitar_note = f.note;
   }
 
   // The built-in found sounds are deterministic, so one set per sample rate serves every
@@ -705,7 +838,7 @@ class Engine {
   dsp::FmChip fm_;
   dsp::FmControls last_fm_{};
   std::array<bool, dsp::FmChip::kChannels> fm_in_use_{};
-  std::array<std::atomic<std::shared_ptr<const dsp::Sample>>, kSampleSlots> slots_{};
+  std::array<AtomicSharedPtr<const dsp::Sample>, kSampleSlots> slots_{};
   std::array<std::shared_ptr<const dsp::Sample>, kSampleSlots> found_{};
   std::array<dsp::Fuzz, 2> fuzz_{};
   std::array<dsp::Cabinet, 2> cabinet_{};
@@ -723,6 +856,8 @@ class Engine {
   std::array<dsp::LoFi, 2> lofi_{};
   std::array<dsp::TapeMachine, 2> machine_{};
   dsp::FeedbackVoice feedback_;
+  dsp::guitar::Guitar guitar_;
+  double release_s_ = 0.12;
   dsp::Pump pump_;
   dsp::Limiter limiter_;
   dsp::Smoother master_;

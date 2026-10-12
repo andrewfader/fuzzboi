@@ -146,6 +146,14 @@ auto Brighter(double ratio = 1.15) {
     return cb > ratio * ca ? ok() : fail("centroid %.0f Hz -> %.0f Hz is not brighter", ca, cb);
   };
 }
+// Brighter in the first 100 ms of the note, where what plucks the string is heard before its
+// upper partials have rung away.
+auto BrighterAttack(double ratio = 1.15) {
+  return [=](const Render& a, const Render& b) {
+    const double ca = centroid(Span(a.mono, 0, 4800)), cb = centroid(Span(b.mono, 0, 4800));
+    return cb > ratio * ca ? ok() : fail("attack centroid %.0f Hz -> %.0f Hz is not brighter", ca, cb);
+  };
+}
 auto Darker(double ratio = 1.15) {
   return [=](const Render& a, const Render& b) {
     const double ca = centroid(held(a)), cb = centroid(held(b));
@@ -413,6 +421,31 @@ std::array<Proof, P::kParamCount> proofs() {
   // shimmer: one flute-like drawbar into a large chamber; the octave above the note appears
   { std::vector<Setting> s = one_drawbar; s.push_back({kDraw8, 1}); s.push_back({kVerbMix, 1}); s.push_back({kVerbSize, 0.9});
     set(kVerbShimmer, ctx(kSourceOrgan, s), 0, 1, ToneRises(2.0, 2.0)); }
+  // physical guitar. The proofs that measure pitch or brightness use the single-coil electric:
+  // its pickup hears the string directly, where the dreadnought's body barely radiates below its
+  // 102 Hz air resonance (so D2's fundamental is faint) and its low modes dominate a centroid.
+  const std::vector<Setting> single_coil{{kGuitarModel, 2}};
+  set(kGuitarModel, ctx(kSourceGuitar), 0, 2, Differs());
+  // D2 is below a standard-tuned guitar, so it is fretted an octave up; in drop D the low string
+  // plays it.
+  set(kGuitarTuning, ctx(kSourceGuitar, single_coil, 38), 0, 1, PitchCents(-1200.0, 30.0));
+  // A capo at the 2nd fret puts the open low E out of reach: E2 moves up an octave.
+  set(kGuitarCapo, ctx(kSourceGuitar, single_coil, 40), 0, 2, PitchCents(1200.0, 30.0));
+  // F3 in the open position is the D string at the 3rd fret, 546 mm from fret to compensated
+  // saddle on the dreadnought. Plucked at 273 mm, the middle, the second harmonic has its node
+  // under the finger and is missing; plucked 60 mm from the saddle it is back. (Not E3: its
+  // second harmonic is the open high E, which rings in sympathy and fills the notch in.)
+  set(kGuitarPluck, ctx(kSourceGuitar, {{kGuitarPick, 1}}, 53), 273, 60, ToneRises(2.0, 3.0));
+  // On the bridge pickup, which hears the upper partials a pick's narrow edge excites and a
+  // fingertip's flesh rounds away, over the attack, before those partials have rung away.
+  set(kGuitarPick, ctx(kSourceGuitar, {{kGuitarModel, 2}, {kGuitarPickup, 2}}), 0, 1, BrighterAttack());
+  set(kGuitarPickup, ctx(kSourceGuitar, single_coil), 0, 2, Brighter());
+  // Unmuted against muted: the held note still rings late on.
+  set(kGuitarMute, ctx(kSourceGuitar), 1, 0, LouderLate(10.0));
+  // On the bridge pickup, which hears the upper partials old strings lose first.
+  set(kGuitarAge, ctx(kSourceGuitar, {{kGuitarModel, 2}, {kGuitarPickup, 2}}), 0, 1, Darker());
+  // A3 is the G string's 2nd fret in the open position and the D string's 7th in the 7th.
+  set(kGuitarPosition, ctx(kSourceGuitar), 0, 7, Differs());
   return t;
 }
 

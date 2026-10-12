@@ -15,7 +15,7 @@ Every page: [VOICE](docs/screenshots/page1.png), [ORGAN](docs/screenshots/page2.
 
 ## What is in it
 
-**Thirteen sound sources**, each a small model of the real thing rather than a sample:
+**Fourteen sound sources**, each a small model of the real thing rather than a sample:
 
 | Source | What it models |
 |---|---|
@@ -31,6 +31,7 @@ Every page: [VOICE](docs/screenshots/page1.png), [ORGAN](docs/screenshots/page2.
 | Stylophone | A single buzzy relaxation oscillator with the on/off vibrato |
 | Jangle 12-string | Extended Karplus-Strong string pairs (pick-position comb, strings that bend with the pitch, velocity-bright picks, an electric pickup or an acoustic body), octave strings below the B course |
 | Collage sampler | Sixteen slots across the keys, slices that jump and reverse, scatter, Optigan disc character; empty slots play built-in found sound |
+| Physical guitar | A guitar simulated from its physics: a Martin-style steel dreadnought, a nylon classical, a Strat-style single-coil and a Les Paul-style humbucker, with D'Addario's real strings, equal-tempered frets, real action and a compensated saddle, eight tunings and a capo, stiff two-plane waveguide strings with fitted losses, tension glide on hard plucks, sympathetic strings, a modal body or magnetic pickups, and a guitarist's fingering, choke, hammer-ons and slides. See [docs/GUITAR.md](docs/GUITAR.md) |
 
 **The chord machine**: one key becomes a
 major, minor, sus, seventh, ninth, fifths or octave chord, voiced close, drop-2, open or wide,
@@ -46,15 +47,19 @@ with Doppler), tremolo (sine, square, bias), three-head tape echo (wow, saturati
 feedback, tempo sync), spring reverb (dispersive allpass chains after Parker), chamber (Freeverb
 tunings, with a shimmer that feeds its tail back an octave up), Wall of Sound (doubling, chamber send, squash), the pump (tempo-locked sidechain-style
 ducking of the whole mix, echoes included), backwards, lo-fi, and the master tape machine
-(drive, wow, flutter, hiss, bandwidth, and up to six cassette-to-cassette generations).
+(drive, wow, flutter, hiss, bandwidth, and up to six cassette-to-cassette generations), and an
+output limiter at -2 dBFS so every preset can sit at the same loudness (-16 LUFS momentary) whatever its crest factor.
 
-**Ninety presets**: from "Bright Vox organ" and "Electric jug" through
+**A hundred and twenty-three presets**: from "Bright Vox organ" and "Electric jug" through
 "Eight-theremin swarm", "Marimba-repeat organ", "Quarter-tone lead", "Polymoog strings", "Warbling
 tape collage" and "Space Echo dub" to the second round's "Pumping Juno pad", "Phased octave lead",
 "Pumping pluck bass", "Strummed maj 7 jangle", "Omnichord dream", "Strummed FM bells" and the sample
 bank presets, and the fourth round's shoegaze, fuzz, brown-sound, drone and chillwave sounds: "Reverse-gate
 glide", "Shimmer chime wall", "Jawari buzz raga", "Jet-flanged Plexi", "Dive-bomb Plexi", "Sub-octave doom
-drone", "Swelling tape loop", "Sunbleached Juno pad" and more. Every preset is measured against the [quality bar](docs/QUALITY.md) by
+drone", "Swelling tape loop", "Sunbleached Juno pad" and more, and six for the physical guitar ("Open-D folk
+steel", "Nylon fingerstyle", "Clean neck single-coil", "Bridge-pickup twang", "Humbucker crunch", "Palm-muted chug"), plus a physical-guitar twin of each of the
+27 jangle presets ("Phased 12-str (phys)", "Acoustic 12 (phys)", "Variac Plexi (phys)", ...), the
+12-string ones playing their octave courses on a second real string through the Octaves chord. Every preset is measured against the [quality bar](docs/QUALITY.md) by
 `build/fuzzboi-preset-audit` and held to it by the test suite. Sixteen voices, poly/mono/legato,
 unison with stereo spread, sustain pedal, pitch bend, mod wheel vibrato, CLAP and MIDI note
 dialects, sample-accurate events, parameter modulation, and state that carries loaded samples.
@@ -101,6 +106,7 @@ hardware, installed plug-ins or the network.
 | `sources_tests` | each sound source's pitch and character (bar partials, jug flutter rate, tape run-out, ...) |
 | `fx_tests` | each effect's advertised behaviour (echo tap times, tremolo rate, fuzz harmonics, ...) |
 | `engine_tests` | polyphony, mono/legato, unison, FM channel sharing, pedal, bend, tails, the chord machine and strum, every preset against the quality bar |
+| `guitar_tests` | the physical guitar: the maker's string data, every open string in every tuning by ear, intonation and saddle setbacks, measured stiffness stretch, partial decays, the pluck point's notch, tension glide, fingering and choke, damping and sympathetic strings, pickups and body, hammer-ons, stability |
 | `plugin_smoke`, `note_tests`, `state_tests` | the built `.clap` through the public CLAP ABI: discovery, ports, parameters, events at sample offsets, MIDI, presets, state round trips, malformed state |
 | `advertised_tests` | one proof per parameter from audio; fails if a parameter has no proof |
 | `ui_tests` | the real page table and editor against a fake host that enforces gesture rules and a canvas that records drawing |
@@ -109,7 +115,8 @@ hardware, installed plug-ins or the network.
 
 `build/fuzzboi-ui-preview <dir>` renders every editor page offscreen on Linux for review,
 `build/fuzzboi-preset-audit <dir> [samples]` renders and measures every preset (see
-[docs/QUALITY.md](docs/QUALITY.md)), and `tools/coverage.py` reports line coverage from a `-DFUZZBOI_COVERAGE=ON` build (92.7% of `src/` at
+[docs/QUALITY.md](docs/QUALITY.md)), `tools/guitar_critic.py` grades the physical guitar against
+recordings of real guitars (see [docs/GUITAR.md](docs/GUITAR.md)), and `tools/coverage.py` reports line coverage from a `-DFUZZBOI_COVERAGE=ON` build (92.7% of `src/` at
 the time of writing, excluding the platform window code, which needs a display).
 [AGENTS.md](AGENTS.md) is the verification contract for changes.
 
@@ -123,7 +130,7 @@ the time of writing, excluding the platform window code, which needs a display).
     src/fuzzboi.cpp       the CLAP plug-in (the only file that includes CLAP besides the tests)
     src/ui/               the editor: canvas, layout, widgets, pages, artwork, native backends
     tests/                scenario suites and the CLAP harness
-    tools/                harvest_archive.py, ui_preview.cpp, preset_audit.cpp
+    tools/                harvest_archive.py, ui_preview.cpp, preset_audit.cpp, guitar_render.cpp, guitar_critic.py
     assets/samples/       the harvested sample bank and its manifest
     features/             Gherkin scenarios mapped to tests
 

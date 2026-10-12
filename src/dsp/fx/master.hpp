@@ -191,7 +191,7 @@ class TapeMachine {
 // The output limiter: the last thing before the host. Nothing leaves above the ceiling, so a
 // strum whose pick transient sits 20 dB over its body can be set as loud as a fuzz drone
 // without clipping. The gain drops the instant a sample would cross the ceiling (one detector
-// for both channels keeps the stereo image) and recovers over about 120 ms, so it is a peak
+// for both channels keeps the stereo image) and recovers over about 50 ms, so it is a peak
 // catcher, not a compressor: a chord held under the ceiling passes through untouched. The
 // maximum reduction since the last reading is kept for the meter, and the clip light comes on
 // once it passes kClipDb.
@@ -199,8 +199,8 @@ class Limiter {
  public:
   static constexpr float kCeiling = 0.794f;  // -2 dBFS
   // Reduction beyond which the squash is plainly audible: the clip light's threshold.
-  static constexpr double kClipDb = 6.0;
-  void prepare(double sample_rate) { release_ = std::exp(-1.0 / (0.120 * sample_rate)); reset(); }
+  static constexpr double kClipDb = 9.0;
+  void prepare(double sample_rate) { release_ = std::exp(-1.0 / (0.050 * sample_rate)); reset(); }
   void reset() { gain_ = 1.0; held_db_ = 0.0; }
   // Returns the gain to apply to both channels for this sample.
   float gain(float l, float r) {

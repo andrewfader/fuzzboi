@@ -125,6 +125,11 @@ def slug(text: str) -> str:
     return text[:48] or "sample"
 
 
+def ffmpeg_available() -> bool:
+    """Whether ffmpeg is on PATH. Conversion needs it; the tests stand this in along with convert()."""
+    return shutil.which("ffmpeg") is not None
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--query", action="append", required=True, help="search term; repeatable")
@@ -140,7 +145,7 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--dry-run", action="store_true", help="search, read metadata and report; download nothing")
     args = parser.parse_args(argv)
 
-    if not args.dry_run and shutil.which("ffmpeg") is None:
+    if not args.dry_run and not ffmpeg_available():
         print("ffmpeg is required for conversion", file=sys.stderr)
         return 2
 
