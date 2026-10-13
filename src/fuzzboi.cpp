@@ -673,7 +673,10 @@ bool entry_init(const char*) {
   g_preset_names = presets::names();
   return true;
 }
-void entry_deinit() {}
+// The names live in this module: a host (or a test linking the engine itself, where the loader
+// shares the inline variable with the plug-in, as macOS does) must not keep pointing at them
+// once the module is unloaded.
+void entry_deinit() { g_preset_names = nullptr; }
 const void* entry_factory(const char* id) { return id && !std::strcmp(id, CLAP_PLUGIN_FACTORY_ID) ? &kFactory : nullptr; }
 
 }  // namespace
