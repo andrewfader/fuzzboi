@@ -47,6 +47,16 @@ jobs:
       - name: Run tests
         run: ctest --test-dir build-ci -C Release --output-on-failure
 
+      - name: Backtrace of a crashed test (macOS)
+        if: failure() && runner.os == 'macOS'
+        working-directory: build-ci
+        run: |
+          plugin="$PWD/FUZZBOI.clap/Contents/MacOS/FUZZBOI"
+          for t in $(ctest -C Release --rerun-failed -N | sed -n 's/.*Test *#[0-9]*: *//p'); do
+            case "$t" in plugin_smoke|note_tests|state_tests|advertised_tests) args="$plugin" ;; *) args="" ;; esac
+            lldb --batch -o run -k "bt 40" -k "quit 1" -- "./$t" $args || true
+          done
+
       - name: Stage plugin
         run: cmake --install build-ci --config Release
 

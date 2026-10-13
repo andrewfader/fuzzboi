@@ -44,6 +44,8 @@ inline std::string fmt(const char* format, double a, double b = 0.0, double c = 
 // Runs every scenario, or those whose names contain the filter, and returns the exit code.
 inline int run(int argc, char** argv, int first_filter_arg = 1) {
   const char* filter = argc > first_filter_arg ? argv[first_filter_arg] : nullptr;
+  // Unbuffered, so a crash still shows how far the run got.
+  std::setvbuf(stdout, nullptr, _IONBF, 0);
   int ran = 0;
   for (const Entry& entry : registry()) {
     if (filter && entry.name.find(filter) == std::string::npos) continue;

@@ -454,6 +454,7 @@ std::array<Proof, P::kParamCount> proofs() {
 int main(int argc, char** argv) {
   if (argc < 2) { std::fprintf(stderr, "usage: advertised_tests <FUZZBOI.clap> [filter]\n"); return 2; }
   g_path = argv[1];
+  std::setvbuf(stdout, nullptr, _IONBF, 0);  // a crash still shows the parameter it was on
   const char* filter = argc > 2 ? argv[2] : nullptr;
   const auto table = proofs();
   int missing = 0, failed = 0, passed = 0;
