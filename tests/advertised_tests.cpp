@@ -85,7 +85,7 @@ Render render(const Context& c, uint32_t id, double value) {
     }
     rendered += kBlock;
   }
-  plugin->destroy(plugin);
+  runner.destroy();
   return out;
 }
 

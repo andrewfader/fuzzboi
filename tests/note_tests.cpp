@@ -43,7 +43,7 @@ SCENARIO(a_clap_note_on_makes_sound_and_note_off_stops_it) {
   THEN("it falls silent and the plug-in asks to sleep");
   CHECK(measure::peak(Span(tail, 6000)) < 1e-3, "silent after the release");
   CHECK(runner.run().peak < 1e-4f, "stays silent");
-  plugin->destroy(plugin);
+  runner.destroy();
 }
 
 SCENARIO(midi_notes_controllers_and_bend_are_honoured) {
@@ -74,7 +74,7 @@ SCENARIO(midi_notes_controllers_and_bend_are_honoured) {
   const auto silenced = collect(runner, 40, &chord);
   THEN("nothing is left sounding");
   CHECK(measure::peak(Span(silenced, 6000)) < 1e-3, "all notes off");
-  plugin->destroy(plugin);
+  runner.destroy();
 }
 
 SCENARIO(events_are_applied_at_their_sample_offset) {
@@ -95,7 +95,7 @@ SCENARIO(events_are_applied_at_their_sample_offset) {
   for (uint32_t i = 200; i < 256; ++i) sound_after = sound_after || std::abs(runner.left()[i]) > 1e-4f;
   CHECK(silent_before, "silent before the event");
   CHECK(sound_after, "sound after the event");
-  plugin->destroy(plugin);
+  runner.destroy();
 }
 
 SCENARIO(parameter_automation_changes_the_sound_and_flush_works_offline) {
@@ -119,7 +119,7 @@ SCENARIO(parameter_automation_changes_the_sound_and_flush_works_offline) {
   set_param(plugin, P::kMasterDb, 500.0);
   THEN("it is clamped to the declared range");
   CHECK(param(plugin, P::kMasterDb) == P::spec(P::kMasterDb).max, "clamped");
-  plugin->destroy(plugin);
+  runner.destroy();
 }
 
 SCENARIO(choosing_a_preset_rewrites_the_other_parameters) {
@@ -157,7 +157,7 @@ SCENARIO(every_source_sounds_through_the_plugin) {
     for (float v : out) finite = finite && std::isfinite(v);
     const double rms = measure::rms(Span(out, 1000));
     if (!finite || rms < 1e-3) { all = false; std::printf("    source %d (%s): rms %.5f finite %d\n", source, P::kSourceNames[source], rms, finite); }
-    plugin->destroy(plugin);
+    runner.destroy();
   }
   THEN("all thirteen are audible and finite");
   CHECK(all, "every source sounds");
@@ -177,7 +177,7 @@ SCENARIO(tail_reports_longer_with_echo_and_reverb) {
   THEN("the wet tail is longer and both are sane");
   CHECK(dry > 0 && dry < 48000 * 10, "dry tail is the release plus a margin");
   CHECK(wet > dry * 2, spec::fmt("wet tail %.1f s exceeds dry %.1f s", wet / kRate, dry / kRate));
-  plugin->destroy(plugin);
+  runner.destroy();
 }
 
 int main(int argc, char** argv) {

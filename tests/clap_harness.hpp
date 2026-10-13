@@ -194,7 +194,16 @@ class Runner {
     (void)activated;
     (void)started;
   }
-  ~Runner() { plugin_->stop_processing(plugin_); plugin_->deactivate(plugin_); }
+  ~Runner() { if (plugin_) { plugin_->stop_processing(plugin_); plugin_->deactivate(plugin_); } }
+  // Stops, deactivates and destroys the instance, in that order. A test that ends with the
+  // Runner still in scope must use this rather than plugin->destroy(): the destructor would
+  // otherwise call into the freed instance (a crash on macOS, silent elsewhere).
+  void destroy() {
+    plugin_->stop_processing(plugin_);
+    plugin_->deactivate(plugin_);
+    plugin_->destroy(plugin_);
+    plugin_ = nullptr;
+  }
   Runner(const Runner&) = delete;
   Runner& operator=(const Runner&) = delete;
 

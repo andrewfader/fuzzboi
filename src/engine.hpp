@@ -69,11 +69,13 @@ constexpr std::array<double, params::kSourceCount> kSourceDb{
     -1.5,  // plastic piccolo
     -4.5,  // Stylophone
     -1.0,  // jangle 12-string
-    0.0,   // collage sampler (samples arrive normalised; the found sounds carry their own gain)
+    3.0,   // collage sampler: the found sounds hold the harvested bank's -23 dBFS RMS, so a single
+           // note sits low; the full +7.6 dB --levels asks for would put a sample normalised to
+           // -3 dBFS peak into the limiter, so this lifts it only as far as the per-note window
     0.0,   // physical guitar (see kGuitarModelDb)
 };
 constexpr std::array<double, params::kFmPatchCount> kFmPatchDb{3.5, 5.0, 2.0, 8.5, 6.5, 1.0, 6.5, 1.0};
-constexpr std::array<double, params::kTapeBankCount> kTapeBankDb{-1.0, 5.5, 5.0, 0.0};
+constexpr std::array<double, params::kTapeBankCount> kTapeBankDb{-1.0, 5.5, 5.0, 3.0};  // user tape: as the collage sampler
 // The guitar's output is a radiated pressure or a pickup voltage in its own units; these bring
 // each instrument to the same footing as the other sources.
 constexpr std::array<double, params::kGuitarModelCount> kGuitarModelDb{0.0, 10.8, 0.0, 0.0};

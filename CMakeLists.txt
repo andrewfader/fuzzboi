@@ -21,7 +21,8 @@ endfunction()
 function(fuzzboi_coverage target)
   if(FUZZBOI_COVERAGE AND NOT MSVC)
     target_compile_options(${target} PRIVATE --coverage -O0 -g)
-    target_link_options(${target} PRIVATE --coverage)
+    # PUBLIC: whatever links an instrumented library (the tools too) needs the gcov runtime.
+    target_link_options(${target} PUBLIC --coverage)
   endif()
 endfunction()
 
