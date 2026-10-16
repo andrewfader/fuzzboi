@@ -14,6 +14,7 @@ pluck, bend and damp its strings).
 | Nylon classical | Torres-style classical | 650 mm, 19 | D'Addario EJ45 normal tension | modal body (Woodhouse's measured classical), radiation |
 | Single-coil solid | Fender Stratocaster | 25.5", 21 | D'Addario EXL110 nickel 10-46 | three single coils 152/99/41 mm from the saddle, loaded resonance near 3 kHz |
 | Humbucker solid | Gibson Les Paul | 24.75", 22 | EXL110 | two humbuckers 147/45 mm, coils 18.5 mm apart, resonance near 2.2 kHz; the middle selector position is both |
+| Bass VI | Fender Bass VI | 30", 21 | XLB095 + NW072-NW024 (24-95) | three single coils 179/116/48 mm, resonance near 2.9 kHz; every tuning an octave below a guitar's, low action (1.9/1.6 mm) and a low-cut nut |
 
 Eight tunings (standard, drop D, half step down, DADGAD, open G, D, E, C), a capo, and the player:
 pluck point in mm from the saddle, finger to plectrum, palm mute, string age, hand position.

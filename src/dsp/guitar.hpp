@@ -118,6 +118,9 @@ struct GuitarSpec {
   double sympathetic;
   // Rotation (radians) between the two planes at each reflection off the bridge.
   double plane_exchange;
+  // Semitones the instrument's open strings sit from the tuning table's guitar notes: -12 for a
+  // six-string bass, which takes every guitar tuning an octave down.
+  int transpose = 0;
 };
 
 // Open-string notes, low string first, as MIDI numbers.
@@ -135,8 +138,8 @@ inline constexpr std::array<Tuning, kTuningCount> kTunings{{
     {"Open C", {36, 43, 48, 55, 60, 64}},
 }};
 
-constexpr int kModelCount = 4;
-enum Model : int { kDreadnought, kClassical, kSingleCoil, kHumbucker };
+constexpr int kModelCount = 5;
+enum Model : int { kDreadnought, kClassical, kSingleCoil, kHumbucker, kBassVI };
 
 // The string sets, low E first: part number, gauge, unit weight (D'Addario's chart), core ratio
 // (Zollner's ranges for wound strings), core, eta_f, eta_b, air, measured EI, wound.
@@ -176,6 +179,19 @@ inline constexpr std::array<StringSpec, kStrings> kNylonNormal{{
     {"J4503", 0.0403, 0.00004679, 1.00, Core::Nylon, 1.4e-4, 2.0e-2, 0.0, 0.0, false},
     {"J4502", 0.0322, 0.00002827, 1.00, Core::Nylon, 2.5e-4, 2.0e-2, 0.0, 0.0, false},
     {"J4501", 0.0280, 0.00002092, 1.00, Core::Nylon, 2.5e-4, 2.4e-2, 0.0, 0.0, false},
+}};
+
+// A six-string bass set, 24-95, as Fender strung the Bass VI: the nickel-wound XL NW024 to NW072
+// with an XLB095 bass string for the low E (unit weights from D'Addario's chart; core ratios follow
+// the 10-46 set's, the heavier strings at the low end of Zollner's range). At the 30-inch scale an
+// octave below a guitar every string pulls 26 to 32 lb.
+inline constexpr std::array<StringSpec, kStrings> kNickelBassVI{{
+    {"XLB095", 0.095, 0.00169349, 0.34, Core::Steel, 2.0e-4, 3e-4, 0.0, 0.0, true},
+    {"NW072", 0.072, 0.00094124, 0.36, Core::Steel, 2.0e-4, 3e-4, 0.0, 0.0, true},
+    {"NW056", 0.056, 0.00057598, 0.38, Core::Steel, 2.0e-4, 3e-4, 0.0, 0.0, true},
+    {"NW044", 0.044, 0.00035182, 0.38, Core::Steel, 2.0e-4, 3e-4, 0.0, 0.0, true},
+    {"NW034", 0.034, 0.00021590, 0.42, Core::Steel, 2.0e-4, 3e-4, 0.0, 0.0, true},
+    {"NW024", 0.024, 0.00010857, 0.50, Core::Steel, 2.0e-4, 3e-4, 0.0, 0.0, true},
 }};
 
 inline const GuitarSpec& spec(int model) {
@@ -231,6 +247,20 @@ inline const GuitarSpec& spec(int model) {
         0.0, 0.0, 1.0, 1.0, 0.0,
         {{{0.147, 0.0185, 0.010, 2200.0, 1.5}, {0.0, 0.0, 0.0, 2200.0, 1.5}, {0.045, 0.0185, 0.010, 2300.0, 1.5}}},
         0.15, 0.001};
+    // A six-string bass (Fender Bass VI pattern): 30" scale, 21 frets, six strings an octave below
+    // a guitar's. Three single coils at the Stratocaster's positions scaled to the longer string
+    // (179, 116 and 48 mm from the saddle), wound like a guitar's, so they resonate where the
+    // Stratocaster's do. The action is a low bass setup (1.9 mm bass, 1.6 mm treble at the 12th)
+    // over a low-cut nut: the slack low strings stretch sharp when fretted, and a high action
+    // pushes the first frets on the low E past what a player tunes around.
+    g[kBassVI] = {
+        "Bass VI", Kind::Electric, 30.0 * kInch, 21, kNickelBassVI,
+        1.9e-3, 1.6e-3, 0.25e-3, 0.25e-3, 1.2e-3,
+        0.00056, 0.35, 0.3,
+        {},
+        0.0, 0.0, 1.0, 1.0, 0.0,
+        {{{0.179, 0.0, 0.012, 2900.0, 1.6}, {0.116, 0.0, 0.012, 2900.0, 1.6}, {0.048, 0.0, 0.012, 3000.0, 1.6}}},
+        0.15, 0.001, -12};
     return g;
   }();
   return specs[static_cast<size_t>(std::clamp(model, 0, kModelCount - 1))];
@@ -322,7 +352,7 @@ inline StringPhysics string_physics(const GuitarSpec& g, int string, double open
   };
   p.compensation = 0.0;
   for (int round = 0; round < 6; ++round) {
-    double lo = -0.002, hi = 0.012;
+    double lo = -0.002, hi = 0.020;  // a bass bridge's saddles travel further back than a guitar's
     for (int i = 0; i < 48; ++i) {
       const double mid = 0.5 * (lo + hi);
       StringPhysics trial = p;
@@ -855,7 +885,7 @@ class Guitar {
   const GuitarSpec& guitar() const { return spec(setup_.model); }
   const StringPhysics& physics(int string) const { return physics_[static_cast<size_t>(std::clamp(string, 0, kStrings - 1))]; }
   int open_note(int string) const {
-    return kTunings[static_cast<size_t>(setup_.tuning)].notes[static_cast<size_t>(std::clamp(string, 0, kStrings - 1))];
+    return kTunings[static_cast<size_t>(setup_.tuning)].notes[static_cast<size_t>(std::clamp(string, 0, kStrings - 1))] + guitar().transpose;
   }
 
   // Where a guitarist would play `note`: on a string where it lies between the capo and the top

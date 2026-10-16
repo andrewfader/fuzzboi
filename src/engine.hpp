@@ -78,7 +78,7 @@ constexpr std::array<double, params::kFmPatchCount> kFmPatchDb{3.5, 5.0, 2.0, 8.
 constexpr std::array<double, params::kTapeBankCount> kTapeBankDb{-1.0, 5.5, 5.0, 3.0};  // user tape: as the collage sampler
 // The guitar's output is a radiated pressure or a pickup voltage in its own units; these bring
 // each instrument to the same footing as the other sources.
-constexpr std::array<double, params::kGuitarModelCount> kGuitarModelDb{0.0, 10.8, 0.0, 0.0};
+constexpr std::array<double, params::kGuitarModelCount> kGuitarModelDb{0.0, 10.8, 0.0, 0.0, 0.0};
 inline double gain(const std::array<double, params::kSourceCount>& table, int index) {
   return dsp::db_to_gain(table[static_cast<size_t>(std::clamp(index, 0, params::kSourceCount - 1))]);
 }

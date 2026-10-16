@@ -126,6 +126,47 @@ SCENARIO(every_open_string_in_every_tuning_sounds_at_its_pitch) {
   CHECK(worst <= 3.0, spec::fmt("worst open string %.1f cents", worst));
 }
 
+SCENARIO(the_bass_vi_is_a_guitar_an_octave_down) {
+  GIVEN("the Bass VI: a 30-inch neck strung with D'Addario's XLB095 and NW072 to NW024, in standard tuning");
+  Guitar g = make(kBassVI);
+  const int open[kStrings] = {28, 33, 38, 43, 47, 52};
+  THEN("its open strings are E1 A1 D2 G2 B2 E3, and a soft pluck of each reads within 3 cents of that note on a tuner");
+  double worst = 0.0;
+  for (int s = 0; s < kStrings; ++s) {
+    Guitar b = make(kBassVI);
+    b.pluck(s, 0, 0.1, 3);
+    const auto out = run(b, 2.0);
+    const double want = midi_to_hz(open[s]);
+    const double cents = 1200.0 * std::log2(peak_hz(out, 0.3, 1.6, want) / want);
+    if (std::abs(cents) > 3.0) std::printf("    string %d: %+.1f cents\n", 6 - s, cents);
+    worst = std::max(worst, std::abs(cents));
+    CHECK(g.open_note(s) == open[s], spec::fmt("string %d open note", 6 - s));
+  }
+  CHECK(worst <= 3.0, spec::fmt("worst open string %.1f cents", worst));
+  THEN("each string pulls what its unit weight gives at pitch over the 30-inch scale, within 5%: 26 to 32 lb on every string");
+  bool close = true, bass_like = true;
+  for (int s = 0; s < kStrings; ++s) {
+    const double mu = kNickelBassVI[static_cast<size_t>(s)].unit_weight * kPoundPerInch;
+    const double want = mu * std::pow(2.0 * 30.0 * kInch * midi_to_hz(open[s]), 2.0);
+    const double lb = g.physics(s).tension / 4.44822;
+    if (std::abs(g.physics(s).tension / want - 1.0) >= 0.05) std::printf("    string %d: %.1f N against %.1f\n", 6 - s, g.physics(s).tension, want);
+    close = close && std::abs(g.physics(s).tension / want - 1.0) < 0.05;
+    bass_like = bass_like && lb > 25.0 && lb < 34.0;
+  }
+  CHECK(close, "tensions at pitch");
+  CHECK(bass_like, "tensions in a six-string bass's range");
+  WHEN("a bass note below a guitar's range is asked for");
+  THEN("the bass plays A1 on its A string, where a guitar takes it up an octave");
+  const auto a1 = g.finger(33);
+  CHECK(a1.string == 1 && a1.fret == 0 && a1.note == 33, spec::fmt("bass fingers A1 at string %d fret %d", 6 - a1.string, a1.fret));
+  CHECK(make(kSingleCoil).finger(33).note == 45, "a guitar moves A1 up to A2");
+  Guitar b = make(kBassVI);
+  b.pluck(a1.string, a1.fret, 0.5, 7);
+  const auto out = run(b, 1.5);
+  const double hz = peak_hz(out, 0.2, 1.2, 55.0, 100.0);
+  CHECK(std::abs(1200.0 * std::log2(hz / 55.0)) < 5.0, spec::fmt("A1 sounds at %.2f Hz", hz));
+}
+
 SCENARIO(frets_are_equal_tempered_and_the_saddle_is_compensated_like_a_real_one) {
   GIVEN("each guitar's neck: frets at the equal-tempered positions, the action and nut height, the strings' stiffness");
   THEN("the 12th fret is an exact octave, every fret up to the 15th is within 10 cents of equal temperament, and the first fret reads sharp (the nut's height)");

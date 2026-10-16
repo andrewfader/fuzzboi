@@ -125,11 +125,11 @@ constexpr const char* kChorusModeNames[] = {"Juno I", "Juno II", "I+II", "Ensemb
 constexpr const char* kCabTypeNames[] = {"Tweed", "British", "Top boost"};
 // The physical guitar (src/dsp/guitar.hpp): which instrument, how it is tuned, and where the
 // pickups are. The order matches dsp::guitar::Model, kTunings and PickupSelect.
-constexpr int kGuitarModelCount = 4;
-constexpr const char* kGuitarModelNames[kGuitarModelCount] = {"Steel dreadnought", "Nylon classical", "Single-coil solid", "Humbucker solid"};
+constexpr int kGuitarModelCount = 5;
+constexpr const char* kGuitarModelNames[kGuitarModelCount] = {"Steel dreadnought", "Nylon classical", "Single-coil solid", "Humbucker solid", "Bass VI"};
 constexpr const char* kGuitarTuningNames[] = {"Standard", "Drop D", "Half step down", "DADGAD", "Open G", "Open D", "Open E", "Open C"};
 constexpr const char* kGuitarPickupNames[] = {"Neck", "Middle", "Bridge", "Neck+bridge"};
-constexpr int kPresetCount = 123;  // The names live in presets.hpp; the table only needs the size.
+constexpr int kPresetCount = 124;  // The names live in presets.hpp; the table only needs the size.
 
 constexpr std::array<ParamSpec, kParamCount> kSpecs{{
     // voice

@@ -71,7 +71,7 @@ inline std::vector<PageSpec> fuzzboi_pages() {
       // The whole page is artwork: the visualizer, no parameters.
       {"VISUALS", "A MilkDrop-style light show driven by the output, after LOAMP's visualizer  \xe2\x80\xa2  \xe2\x97\x80 \xe2\x96\xb6 RANDOM AUTO pick presets", theme::pink, 3,
        content_bottom - strip_y, {}},
-      {"GUITAR", "A physically modelled guitar: real strings, frets and tunings on a dreadnought, a classical or two solid bodies", theme::amber, 3, 0,
+      {"GUITAR", "A physically modelled guitar: real strings, frets and tunings on a dreadnought, a classical, two solid bodies or a Bass VI", theme::amber, 3, 0,
        {{"Instrument", 0, {menu(kGuitarModel, 3), menu(kGuitarTuning, 3), knob(kGuitarCapo), knob(kGuitarAge)}},
         {"Right hand", 1, {knob(kGuitarPluck), knob(kGuitarPick), knob(kGuitarMute)}},
         {"Pickups", 2, {menu(kGuitarPickup, 2)}},

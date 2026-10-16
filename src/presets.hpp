@@ -508,6 +508,11 @@ inline const std::vector<Preset>& all() {
                              {kFuzzTone, 0.4}, {kCabinet, 0.6}, {kCabType, 0}, {kEchoMix, 0.5}, {kEchoTime, 1000}, {kEchoHeads, 2},
                              {kEchoFeedback, 0.75}, {kEchoSaturate, 0.5}, {kEchoAge, 0.5}, {kEchoWow, 0.2}, {kVerbMix, 0.2},
                              {kMasterDb, -0.3}}},
+      // the six-string bass a 60s pop record used: neck pickup, played with the fingers 150 mm up
+      // from the bridge, straight into the desk. Full velocity sensitivity: the slack strings go
+      // sharp when plucked hard (tension modulation), so a soft note has to stay a soft pluck.
+      {"Bass VI (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 4}, {kGuitarPickup, 0}, {kGuitarPick, 0.3}, {kGuitarPluck, 150},
+                          {kVelocitySens, 1.0}, {kReleaseMs, 120}, {kVerbMix, 0.05}, {kMasterDb, -4.2}}},
   };
   return table;
 }

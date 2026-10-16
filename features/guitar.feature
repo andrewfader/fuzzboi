@@ -24,6 +24,14 @@ Feature: The physical guitar is a real guitar, simulated
     Given the single-coil electric in each of the eight tunings, and the other guitars in standard
     Then a soft pluck of each open string reads within 3 cents of its note on a tuner
 
+  # the_bass_vi_is_a_guitar_an_octave_down
+  Scenario: The Bass VI is a guitar an octave down
+    Given the Bass VI, a 30-inch neck strung with D'Addario's XLB095 and NW072 to NW024, in standard tuning
+    Then its open strings are E1 A1 D2 G2 B2 E3 and each reads within 3 cents of its note on a tuner
+    And each string pulls what its unit weight gives at pitch, 26 to 32 lb on every string
+    When a bass note below a guitar's range is asked for
+    Then the bass plays it where it is, where a guitar takes it up an octave
+
   # frets_are_equal_tempered_and_the_saddle_is_compensated_like_a_real_one
   Scenario: Frets are equal-tempered and the saddle is compensated like a real one
     Given each guitar's neck, action, nut height and string stiffness

@@ -31,7 +31,7 @@ Every page: [VOICE](docs/screenshots/page1.png), [ORGAN](docs/screenshots/page2.
 | Stylophone | A single buzzy relaxation oscillator with the on/off vibrato |
 | Jangle 12-string | Extended Karplus-Strong string pairs (pick-position comb, strings that bend with the pitch, velocity-bright picks, an electric pickup or an acoustic body), octave strings below the B course |
 | Collage sampler | Sixteen slots across the keys, slices that jump and reverse, scatter, Optigan disc character; empty slots play built-in found sound |
-| Physical guitar | A guitar simulated from its physics: a Martin-style steel dreadnought, a nylon classical, a Strat-style single-coil and a Les Paul-style humbucker, with D'Addario's real strings, equal-tempered frets, real action and a compensated saddle, eight tunings and a capo, stiff two-plane waveguide strings with fitted losses, tension glide on hard plucks, sympathetic strings, a modal body or magnetic pickups, and a guitarist's fingering, choke, hammer-ons and slides. See [docs/GUITAR.md](docs/GUITAR.md) |
+| Physical guitar | A guitar simulated from its physics: a Martin-style steel dreadnought, a nylon classical, a Strat-style single-coil, a Les Paul-style humbucker and a Fender Bass VI an octave down, with D'Addario's real strings, equal-tempered frets, real action and a compensated saddle, eight tunings and a capo, stiff two-plane waveguide strings with fitted losses, tension glide on hard plucks, sympathetic strings, a modal body or magnetic pickups, and a guitarist's fingering, choke, hammer-ons and slides. See [docs/GUITAR.md](docs/GUITAR.md) |
 
 **The chord machine**: one key becomes a
 major, minor, sus, seventh, ninth, fifths or octave chord, voiced close, drop-2, open or wide,
