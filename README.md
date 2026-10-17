@@ -5,13 +5,12 @@ a native editor on all three (X11, Win32, Cocoa).
 
 ![The VOICE page: the liquid-light output scope above the source, envelope and pitch cards](docs/screenshots/page1.png)
 
-
 Every page: [VOICE](docs/screenshots/page1.png), [ORGAN](docs/screenshots/page2.png),
 [SYNTH](docs/screenshots/page3.png), [FM](docs/screenshots/page4.png),
 [TAPE](docs/screenshots/page5.png), [TOYS](docs/screenshots/page6.png),
 [PEDALS](docs/screenshots/page7.png), [ECHO](docs/screenshots/page8.png),
-[MASTER](docs/screenshots/page9.png), [VISUALS](docs/screenshots/page10.png), and the
-[source menu](docs/screenshots/menu.png).
+[MASTER](docs/screenshots/page9.png), [VISUALS](docs/screenshots/page10.png),
+[GUITAR](docs/screenshots/page11.png), and the [source menu](docs/screenshots/menu.png).
 
 ## What is in it
 
@@ -50,14 +49,15 @@ ducking of the whole mix, echoes included), backwards, lo-fi, and the master tap
 (drive, wow, flutter, hiss, bandwidth, and up to six cassette-to-cassette generations), and an
 output limiter at -2 dBFS so every preset can sit at the same loudness (-16 LUFS momentary) whatever its crest factor.
 
-**A hundred and twenty-three presets**: from "Bright Vox organ" and "Electric jug" through
+**A hundred and twenty-four presets**: from "Bright Vox organ" and "Electric jug" through
 "Eight-theremin swarm", "Marimba-repeat organ", "Quarter-tone lead", "Polymoog strings", "Warbling
 tape collage" and "Space Echo dub" to the second round's "Pumping Juno pad", "Phased octave lead",
 "Pumping pluck bass", "Strummed maj 7 jangle", "Omnichord dream", "Strummed FM bells" and the sample
 bank presets, and the fourth round's shoegaze, fuzz, brown-sound, drone and chillwave sounds: "Reverse-gate
 glide", "Shimmer chime wall", "Jawari buzz raga", "Jet-flanged Plexi", "Dive-bomb Plexi", "Sub-octave doom
-drone", "Swelling tape loop", "Sunbleached Juno pad" and more, and six for the physical guitar ("Open-D folk
-steel", "Nylon fingerstyle", "Clean neck single-coil", "Bridge-pickup twang", "Humbucker crunch", "Palm-muted chug"), plus a physical-guitar twin of each of the
+drone", "Swelling tape loop", "Sunbleached Juno pad" and more, and seven for the physical guitar ("Open-D folk
+steel", "Nylon fingerstyle", "Clean neck single-coil", "Bridge-pickup twang", "Humbucker crunch", "Palm-muted chug",
+"Bass VI (phys)"), plus a physical-guitar twin of each of the
 27 jangle presets ("Phased 12-str (phys)", "Acoustic 12 (phys)", "Variac Plexi (phys)", ...), the
 12-string ones playing their octave courses on a second real string through the Octaves chord. Every preset is measured against the [quality bar](docs/QUALITY.md) by
 `build/fuzzboi-preset-audit` and held to it by the test suite. Sixteen voices, poly/mono/legato,
@@ -69,12 +69,12 @@ piano, music box, theremin, an Omnichord, a harmonium, a ghanta bell, a singing 
 gong, shortwave, temple bowls, a geyser and rain) sits in `assets/samples/` with its licences and
 checksums in the manifest; see [docs/SAMPLES.md](docs/SAMPLES.md).
 
-Sample loading and harvesting is in [docs/SAMPLES.md](docs/SAMPLES.md)
-
 The output scope triggers on each cycle and amplifies quiet playing (up to +24 dB, gain shown)
 so the waveform is always readable. The VISUALS page is a MilkDrop/projectM-style feedback
 visualizer patterned after LOAMP's: eight presets (tunnel, kaleidoscope, lava lamp, starburst...)
 driven by the output's bass, mid and treble, with previous / next / random / auto cycling.
+
+![The VISUALS page: the Liquid Tunnel preset, a feedback tunnel ringed by the output waveform](docs/screenshots/page10.png)
 
 ## Building
 

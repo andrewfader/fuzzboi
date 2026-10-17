@@ -19,6 +19,10 @@ pluck, bend and damp its strings).
 Eight tunings (standard, drop D, half step down, DADGAD, open G, D, E, C), a capo, and the player:
 pluck point in mm from the saddle, finger to plectrum, palm mute, string age, hand position.
 
+The instrument and the player sit on the editor's GUITAR page:
+
+![The GUITAR page: instrument, right hand, pickups and left hand](screenshots/page11.png)
+
 ## What is simulated
 
 - **Strings from the maker's data.** Mass per length is D'Addario's published unit weight; the
@@ -64,11 +68,11 @@ pluck point in mm from the saddle, finger to plectrum, palm mute, string age, ha
 
 ## Presets
 
-Six presets are written for it ("Open-D folk steel" to "Palm-muted chug"), and each of the 27
-presets built on the Jangle 12-string has a twin ending in "(phys)" that keeps its effects,
-envelope and voice settings and translates the jangle's controls: body 50% or more becomes the
-steel dreadnought, fuzzed presets the humbucker, the rest the single-coil; the pick position
-becomes the same fraction of the string as a pluck point in mm; brightness becomes pick hardness
+Seven presets are written for it ("Open-D folk steel" to "Palm-muted chug", and "Bass VI
+(phys)"), and each of the 27 presets built on the Jangle 12-string has a twin ending in
+"(phys)" that keeps its effects, envelope and voice settings and translates the jangle's
+controls: body 50% or more becomes the steel dreadnought, fuzzed presets the humbucker, the rest
+the single-coil; the pick position becomes the same fraction of the string as a pluck point in mm; brightness becomes pick hardness
 (bright or fuzzed presets on the bridge pickup); short decays become palm muting. The guitar has
 six strings, so a 12-string's octave courses are played through the chord machine's Octaves
 setting: each key sounds its note and the octave on two real strings, as a course does.
