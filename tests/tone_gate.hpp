@@ -61,6 +61,14 @@ const std::vector<Case>& cases() {
       {"Fuzz wall lead (phys)", "DinosaurJr_Mascis", Phrase::Lead, 1.9, 0.0},
       {"Surf-punk lead (phys)", "Pixies_Santiago", Phrase::Lead},
       {"Loft drone chug (phys)", "VelvetUnderground", Phrase::Power},
+      {"Power-pop crunch (phys)", "Smithereens", Phrase::Strum},
+      {"Baggy semi-hollow (phys)", "StoneRoses", Phrase::Strum},
+      {"Funk wah chops (phys)", "HappyMondays", Phrase::Power},
+      {"Fuzzy logic fuzz (phys)", "SuperFurryAnimals", Phrase::Strum, 1.5, 0.0},
+      {"Garage blues fuzz (phys)", "BlackKeys", Phrase::Lead},
+      {"Downtown thin crunch (phys)", "Strokes", Phrase::Power},
+      {"Casino delay arpeggio (phys)", "Interpol", Phrase::Arpeggio},
+      {"Cold-room chorus (phys)", "JoyDivision", Phrase::Power},
   };
   return c;
 }

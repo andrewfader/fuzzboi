@@ -254,6 +254,14 @@ auto LaterOnset(double expected_ms, double tolerance_ms) {
 
 
 // The tone at a multiple of the note moves by `expected_db`, within `tolerance_db`.
+auto Narrower() {
+  return [](const Render& a, const Render& b) {
+    const double ca = measure::correlation(Span(a.left, 4800, 24000), Span(a.right, 4800, 24000));
+    const double cb = measure::correlation(Span(b.left, 4800, 24000), Span(b.right, 4800, 24000));
+    return cb > ca + 0.05 ? ok() : fail("L/R correlation %.3f -> %.3f is not narrower", ca, cb);
+  };
+}
+
 auto ToneMovesDb(double ratio_of_note, double expected_db, double tolerance_db) {
   return [=](const Render& a, const Render& b) {
     const double hz = g_note_hz * ratio_of_note;
@@ -481,6 +489,15 @@ std::array<Proof, P::kParamCount> proofs() {
   set(kDoubleTrack, ctx(kSourceGuitar, {{kGuitarModel, 2}}), 0, 1, Wider());
   // The amplifier's hiss at -50 dBFS against none, under a clean single-coil note: the top band fills.
   set(kNoiseFloor, ctx(kSourceGuitar, {{kGuitarModel, 2}}), -120, -50, MoreNoise());
+  // the wah, on a bright saw: in, its band-pass shapes the tone; heel to toe, the peak climbs
+  // from about 450 Hz to 2.2 kHz; in Auto a hard note pushes the treadle up from the heel.
+  set(kWah, ctx(kSourceSynth, kOpenSynth), 0, 1, Differs());
+  // A stereo pair 2 m back in a studio against one microphone there: the room folds to mono.
+  set(kMicSetup, ctx(kSourceOrgan, {{kRoomSize, 3}, {kMicDistance, 2.0}}), 0, 1, Narrower());
+  { std::vector<Setting> w = kOpenSynth; w.push_back({kWah, 1});
+    set(kWahPedal, ctx(kSourceSynth, w), 0, 1, Brighter(1.5));
+    w.push_back({kWahPedal, 0});
+    set(kWahAuto, ctx(kSourceSynth, w), 0, 1, Brighter(1.2)); }
   return t;
 }
 

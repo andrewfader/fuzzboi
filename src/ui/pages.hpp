@@ -49,9 +49,10 @@ inline std::vector<PageSpec> fuzzboi_pages() {
         {"Theremin", 1, {knob(kThereminGlide), knob(kThereminShape), knob(kThereminUnison)}},
         {"Saw and piccolo", 1, {knob(kSawBow), knob(kPiccoloBreath), knob(kPiccoloChaos)}},
         {"Jangle 12-string", 2, {knob(kJangleOctave), knob(kJangleBright), knob(kJangleDecay), knob(kJanglePick), knob(kJangleBody)}}}},
-      {"PEDALS", "The pedalboard: fuzz and amp, speaker cabinet, phaser, Juno chorus and flanger, rotary speaker and tremolo", theme::red, 3, 120,
+      {"PEDALS", "The pedalboard: wah, fuzz and amp, speaker cabinet, phaser, Juno chorus and flanger, rotary speaker and tremolo", theme::red, 3, 120,
        {{"Fuzz", 0, {knob(kFuzz), knob(kFuzzTone), knob(kFuzzLevel), segments(kFuzzMode, 3)}},
         {"Phaser", 1, {knob(kPhaserMix), knob(kPhaserRate), knob(kPhaserDepth), knob(kPhaserFeedback), segments(kPhaserStages, 3)}},
+        {"Wah", 1, {knob(kWah), knob(kWahPedal), knob(kWahAuto)}},
         {"Chorus", 0, {knob(kChorusMix), knob(kChorusRate), knob(kChorusDepth), menu(kChorusMode, 3)}},
         {"Cabinet", 2, {knob(kCabinet), menu(kCabType, 2)}},
         {"Rotary", 2, {knob(kRotaryMix), knob(kRotarySpeed)}},
@@ -71,12 +72,12 @@ inline std::vector<PageSpec> fuzzboi_pages() {
       // The whole page is artwork: the visualizer, no parameters.
       {"VISUALS", "A MilkDrop-style light show driven by the output, after LOAMP's visualizer  \xe2\x80\xa2  \xe2\x97\x80 \xe2\x96\xb6 RANDOM AUTO pick presets", theme::pink, 3,
        content_bottom - strip_y, {}},
-      {"GUITAR", "A physically modelled guitar, twelve instruments from flat-tops to twelve-strings, in a room you choose (the room hears every source)", theme::amber, 3, 0,
+      {"GUITAR", "A physically modelled guitar, fourteen instruments from flat-tops to twelve-strings, in a room you choose (the room hears every source)", theme::amber, 3, 0,
        {{"Instrument", 0, {menu(kGuitarModel, 3), menu(kGuitarTuning, 3), knob(kGuitarCapo), knob(kGuitarAge)}},
         {"Right hand", 1, {knob(kGuitarPluck), knob(kGuitarPick), knob(kGuitarMute)}},
         {"Pickups", 2, {menu(kGuitarPickup, 2), knob(kNoiseFloor)}},
         {"Left hand", 2, {knob(kGuitarPosition), knob(kDoubleTrack)}},
-        {"Room", 1, {menu(kRoomSize, 2), knob(kRoomAbsorption), knob(kMicDistance), menu(kMicPattern, 2)}},
+        {"Room", 1, {menu(kRoomSize, 2), knob(kRoomAbsorption), knob(kMicDistance), menu(kMicPattern, 2), segments(kMicSetup, 2)}},
         {"Air", 2, {knob(kHumidity), knob(kTemperature)}}}},
   };
 }

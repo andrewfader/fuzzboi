@@ -5,6 +5,11 @@ Feature: Each effect does what its name and knobs advertise
 
   Executable: tests/fx_tests.cpp (CTest fx_tests).
 
+  # the_wah_sweeps_its_peak_from_heel_to_toe
+  Scenario: The wah sweeps its peak from heel to toe
+    Given the wah fully in, held at the heel and then at the toe, fed sines from 200 Hz to 5 kHz
+    Then its peak sits within 10% of 450 Hz at the heel and of 2.2 kHz at the toe, and stands over the dry level
+
   # fuzz_adds_harmonics_and_flattens_dynamics
   Scenario: Every fuzz mode (Muff, Face, Bender, Plexi, Octave) adds harmonics, squashes dynamics and bypasses at zero
     Given a clean 220 Hz sine at two levels, through each fuzz mode

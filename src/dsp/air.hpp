@@ -31,6 +31,9 @@
 //   15 dB at 100 Hz for a cardioid 5 cm from a speaker; the capsule and preamp roll it off below
 //   35 Hz, and nothing sits closer than the 5 cm from grille to capsule.
 //
+// - One microphone hears the direct sound and the room together, in mono; a stereo pair hears the
+//   reflections arriving from each side differently.
+//
 // Not modelled: light (it does not reach the sound), air pressure (fixed at one atmosphere),
 // wind and temperature gradients, and the walls' frequency dependence (one coefficient).
 #pragma once
@@ -124,6 +127,7 @@ class Room {
     double humidity = 0.45;      // relative, 0..1
     double celsius = 20.0;
     int pattern = 0;             // 0 omnidirectional, 1 cardioid, 2 figure-of-eight
+    bool mono = false;           // one microphone (what reaches it, room and all, in mono) or a stereo pair
     bool operator==(const Settings&) const = default;
   };
   // The pressure share of each pattern.
@@ -306,6 +310,7 @@ class Room {
       out_l += late_gain_ * tail_l;
       out_r += late_gain_ * tail_r;
     }
+    if (settings_.mono) { const float m = 0.5f * (out_l + out_r); out_l = out_r = m; }
     l = out_l; r = out_r;
   }
 

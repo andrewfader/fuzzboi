@@ -153,10 +153,11 @@ inline constexpr std::array<Tuning, kTuningCount> kTunings{{
     {"Open C", {36, 43, 48, 55, 60, 64}},
 }};
 
-constexpr int kModelCount = 12;
+constexpr int kModelCount = 14;
 enum Model : int {
   kDreadnought, kClassical, kSingleCoil, kHumbucker, kBassVI,
-  kElectric12, kAcoustic12, kArchtop, kAuditorium, kPlateSingleCoil, kOffset, kFibreglass
+  kElectric12, kAcoustic12, kArchtop, kAuditorium, kPlateSingleCoil, kOffset, kFibreglass,
+  kSemiHollow, kThinlineP90
 };
 
 // The string sets, low E first: part number, gauge, unit weight (D'Addario's chart), core ratio
@@ -432,6 +433,30 @@ inline const GuitarSpec& spec(int model) {
         {},
         0.0, 0.0, 1.0, 1.0, 0.0,
         {{{0.150, 0.0, 0.012, 5000.0, 1.5}, {0.0, 0.0, 0.0, 5000.0, 1.5}, {0.045, 0.0, 0.012, 5200.0, 1.6}}},
+        0.15, 0.002};
+    // A semi-hollow (Gibson ES-335 pattern): 24.75" scale, 22 frets, EXL110, a thinline body with a
+    // maple block under the bridge, so it rings almost as long as a solid body, and two humbuckers
+    // where a Les Paul has them.
+    g[kSemiHollow] = {
+        "Semi-hollow", Kind::Electric, 24.75 * kInch, 22, kNickelRegularLights,
+        2.0e-3, 1.6e-3, 0.45e-3, 0.30e-3, 1.1e-3,
+        0.00052, 0.35, 0.3,
+        {},
+        0.0, 0.0, 1.0, 1.0, 0.0,
+        {{{0.147, 0.0185, 0.010, 2250.0, 1.5}, {0.0, 0.0, 0.0, 2250.0, 1.5}, {0.045, 0.0185, 0.010, 2350.0, 1.5}}},
+        0.15, 0.001};
+    // A fully hollow thinline with P-90s (Epiphone Casino pattern): 24.75" scale, 20 frets, EXL110,
+    // a floating bridge on a trapeze tailpiece that drains the strings faster, and two P-90s 155 and
+    // 48 mm from the saddle: single coils with a wide window (two rows of adjustable poles over bar
+    // magnets) and about three times a Stratocaster coil's turns, so they resonate lower and
+    // broader, near 2.8 kHz.
+    g[kThinlineP90] = {
+        "Thinline P-90", Kind::Electric, 24.75 * kInch, 20, kNickelRegularLights,
+        2.0e-3, 1.7e-3, 0.45e-3, 0.30e-3, 1.0e-3,
+        0.0014, 0.30, 0.4,
+        {},
+        0.0, 0.0, 1.0, 1.0, 0.0,
+        {{{0.155, 0.0, 0.018, 2700.0, 1.3}, {0.0, 0.0, 0.0, 2700.0, 1.3}, {0.048, 0.0, 0.018, 2900.0, 1.3}}},
         0.15, 0.002};
     return g;
   }();

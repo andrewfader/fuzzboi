@@ -80,7 +80,7 @@ constexpr std::array<double, params::kTapeBankCount> kTapeBankDb{-1.0, 5.5, 5.0,
 // The guitar's output is a radiated pressure or a pickup voltage in its own units; these bring
 // each instrument to the same footing as the other sources.
 constexpr std::array<double, params::kGuitarModelCount> kGuitarModelDb{0.0, 10.8, 0.0, 0.0, 0.0,
-                                                                     0.0, 3.5, 0.0, 1.6, 0.0, 0.0, 0.0};
+                                                                     0.0, 3.5, 0.0, 1.6, 0.0, 0.0, 0.0, 0.0, 0.0};
 inline double gain(const std::array<double, params::kSourceCount>& table, int index) {
   return dsp::db_to_gain(table[static_cast<size_t>(std::clamp(index, 0, params::kSourceCount - 1))]);
 }
@@ -359,6 +359,7 @@ class Engine {
     for (auto& v : voices_) v.prepare(rate);
     fm_.prepare(rate);
     for (auto& f : fuzz_) f.prepare(rate);
+    for (auto& w : wah_) w.prepare(rate);
     for (auto& c : cabinet_) c.prepare(rate);
     for (auto& p : phaser_) p.prepare(rate);
     chorus_.prepare(rate);
@@ -677,6 +678,9 @@ class Engine {
       const float howl = feedback_.process(mono, s[params::kFeedbackAmount], static_cast<int>(s[params::kFeedbackHarmonic]), s[params::kFeedbackSwell], feedback_hz) - mono;
       l += howl; r += howl;
       const auto fuzz_mode = static_cast<dsp::FuzzMode>(std::clamp(static_cast<int>(s[params::kFuzzMode]), 0, 4));
+      // The wah sits first on the board, before the fuzz.
+      l = wah_[0].process(l, s[params::kWah], s[params::kWahPedal], s[params::kWahAuto]);
+      r = wah_[1].process(r, s[params::kWah], s[params::kWahPedal], s[params::kWahAuto]);
       l = fuzz_[0].process(l, s[params::kFuzz], s[params::kFuzzTone], s[params::kFuzzLevel], fuzz_mode);
       r = fuzz_[1].process(r, s[params::kFuzz], s[params::kFuzzTone], s[params::kFuzzLevel], fuzz_mode);
       l = cabinet_[0].process(l, s[params::kCabinet], cab_type);
@@ -805,6 +809,7 @@ class Engine {
     r.humidity = s[params::kHumidity];
     r.celsius = s[params::kTemperature];
     r.pattern = static_cast<int>(std::lround(s[params::kMicPattern]));
+    r.mono = s[params::kMicSetup] >= 0.5;
     return r;
   }
 
@@ -943,6 +948,7 @@ class Engine {
   std::array<AtomicSharedPtr<const dsp::Sample>, kSampleSlots> slots_{};
   std::array<std::shared_ptr<const dsp::Sample>, kSampleSlots> found_{};
   std::array<dsp::Fuzz, 2> fuzz_{};
+  std::array<dsp::Wah, 2> wah_{};
   std::array<dsp::Cabinet, 2> cabinet_{};
   std::array<dsp::Phaser, 2> phaser_{};
   dsp::Chorus chorus_;

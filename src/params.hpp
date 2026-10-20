@@ -78,6 +78,10 @@ enum ParamId : uint32_t {
   kMicPattern, kDoubleTrack,
   // --- appended in the ninth round: the amplifier's noise floor ----------------------------------
   kNoiseFloor,
+  // --- appended in the tenth round: the wah ------------------------------------------------------
+  kWah, kWahPedal, kWahAuto,
+  // --- appended in the eleventh round: one microphone or a pair --------------------------------------
+  kMicSetup,
   kParamCount
 };
 
@@ -131,11 +135,11 @@ constexpr const char* kChorusModeNames[] = {"Juno I", "Juno II", "I+II", "Ensemb
 constexpr const char* kCabTypeNames[] = {"Tweed", "British", "Top boost"};
 // The physical guitar (src/dsp/guitar.hpp): which instrument, how it is tuned, and where the
 // pickups are. The order matches dsp::guitar::Model, kTunings and PickupSelect.
-constexpr int kGuitarModelCount = 12;
+constexpr int kGuitarModelCount = 14;
 constexpr const char* kGuitarModelNames[kGuitarModelCount] = {
     "Steel dreadnought", "Nylon classical", "Single-coil solid", "Humbucker solid", "Bass VI",
     "Electric 12-string", "Acoustic 12-string", "Jazz archtop", "Grand auditorium", "Plate single-coil",
-    "Offset short scale", "Fibreglass hollow"};
+    "Offset short scale", "Fibreglass hollow", "Semi-hollow", "Thinline P-90"};
 constexpr const char* kGuitarTuningNames[] = {"Standard", "Drop D", "Half step down", "DADGAD", "Open G", "Open D", "Open E", "Open C"};
 constexpr const char* kGuitarPickupNames[] = {"Neck", "Middle", "Bridge", "Neck+bridge"};
 // The room (src/dsp/air.hpp): its volume, in cubic metres, for each named size.
@@ -143,7 +147,8 @@ constexpr int kRoomSizeCount = 7;
 constexpr const char* kRoomSizeNames[kRoomSizeCount] = {"Off", "Booth", "Bedroom", "Studio", "Club", "Hall", "Church"};
 constexpr std::array<double, kRoomSizeCount> kRoomVolumes{0.0, 10.0, 35.0, 150.0, 600.0, 3000.0, 12000.0};
 constexpr const char* kMicPatternNames[] = {"Omni", "Cardioid", "Figure-8"};
-constexpr int kPresetCount = 155;  // The names live in presets.hpp; the table only needs the size.
+constexpr const char* kMicSetupNames[] = {"Stereo pair", "Mono"};
+constexpr int kPresetCount = 164;  // The names live in presets.hpp; the table only needs the size.
 
 constexpr std::array<ParamSpec, kParamCount> kSpecs{{
     // voice
@@ -329,6 +334,10 @@ constexpr std::array<ParamSpec, kParamCount> kSpecs{{
     {"Mic pattern", "Room", 0, 2, 0, true, Unit::Options, kMicPatternNames},
     {"Double track", "Guitar", 0, 1, 0, false, Unit::Percent, nullptr},
     {"Noise floor", "Guitar", -120, -40, -120, false, Unit::Db, nullptr},
+    {"Wah", "Pedals/Wah", 0, 1, 0, false, Unit::Percent, nullptr},
+    {"Wah pedal", "Pedals/Wah", 0, 1, 0.5, false, Unit::Percent, nullptr},
+    {"Wah auto", "Pedals/Wah", 0, 1, 0, false, Unit::Percent, nullptr},
+    {"Mic setup", "Room", 0, 1, 0, true, Unit::Options, kMicSetupNames},
 }};
 
 // The preset parameter's value names come from the preset table, which lives above this header

@@ -21,6 +21,24 @@ std::vector<float> sine(double hz, size_t n, double amplitude = 0.5) {
 }
 }  // namespace
 
+SCENARIO(the_wah_sweeps_its_peak_from_heel_to_toe) {
+  GIVEN("the wah fully in, held at the heel and then at the toe, fed sines from 200 Hz to 5 kHz in twelfth-octave steps");
+  THEN("its peak sits within 10% of 450 Hz at the heel and of 2.2 kHz at the toe, as Keen measured the Cry Baby, and stands over the dry level");
+  for (auto [pedal, want] : {std::pair{0.0, 450.0}, std::pair{1.0, 2200.0}}) {
+    double best_hz = 0.0, best = 0.0;
+    for (double hz = 200.0; hz <= 5000.0; hz *= std::exp2(1.0 / 12.0)) {
+      Wah wah; wah.prepare(kRate);
+      const auto in = sine(hz, static_cast<size_t>(0.1 * kRate), 0.4);
+      std::vector<float> out(in.size());
+      for (size_t i = 0; i < in.size(); ++i) out[i] = wah.process(in[i], 1.0, pedal, 0.0);
+      const double gain = measure::rms(Span(out, out.size() / 2)) / measure::rms(Span(in, in.size() / 2));
+      if (gain > best) { best = gain; best_hz = hz; }
+    }
+    CHECK(std::abs(best_hz / want - 1.0) <= 0.10, spec::fmt("pedal %.0f: peak at %.0f Hz", pedal, best_hz));
+    CHECK(best > 1.0, spec::fmt("peak gain %.2f over the dry level", best));
+  }
+}
+
 SCENARIO(fuzz_adds_harmonics_and_flattens_dynamics) {
   GIVEN("a clean 220 Hz sine at two levels, through each fuzz mode");
   for (int mode = 0; mode < 5; ++mode) {

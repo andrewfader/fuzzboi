@@ -22,6 +22,8 @@ pluck, bend and damp its strings).
 | Plate single-coil | Fender Telecaster | 25.5", 21 | EXL110 (10-46) | a slanted bridge pickup in a steel plate 40 mm from the saddle (peak near 3.8 kHz, high Q), a chromed neck pickup 155 mm up |
 | Offset short scale | Fender Mustang | 24", 22 | EXL115 (11-49) | two low-wound single coils 140/55 mm near 4.2 kHz; a floating vibrato bridge |
 | Fibreglass hollow | Valco Res-O-Glas ("Airline") | 24.75", 20 | EXL110 | two small single coils 150/45 mm near 5 kHz; a high action |
+| Semi-hollow | Gibson ES-335 | 24.75", 22 | EXL110 | two humbuckers 147/45 mm near 2.3 kHz; a maple block under the bridge, so it rings almost as long as a solid body |
+| Thinline P-90 | Epiphone Casino | 24.75", 20 | EXL110 | two P-90s 155/48 mm, a wide window and many turns, near 2.8 kHz; fully hollow, a floating bridge on a trapeze |
 
 Unit weights the D'Addario chart does not list (the 12-string sets' NW021, PB047 and its kin,
 the flatwounds) are scaled from the chart's neighbours by the gauge squared; flatwounds take 8%
@@ -57,6 +59,9 @@ microphone:
   own delay, spreading loss, wall loss and air loss, and the late tail is an eight-line feedback
   delay network decaying at the Sabine time with the air's absorption in it, at the level
   diffuse-field theory gives against the direct sound.
+- **One microphone or a pair.** A stereo pair hears each side's reflections differently; one
+  microphone hears the direct sound and the room together, in mono, as a lot of garage and 60s
+  records were made.
 - **The room's air reaches the guitar.** An acoustic top takes up the air's moisture
   (Hailwood-Horrobin equilibrium moisture content, Wood Handbook): wetter wood is softer, heavier
   and lossier, so the body's modes fall and broaden. The strings were tuned at 20 C; in a warmer
@@ -65,6 +70,10 @@ microphone:
 
 What is not modelled: light (it has no path to the sound), air pressure, wind, temperature
 gradients, the walls' frequency dependence, and humidity's effect on nylon strings.
+
+A **wah** sits first on the pedalboard: the Cry Baby's inductor-loaded band-pass, its peak swept
+from about 450 Hz at the heel to about 2.2 kHz at the toe (R.G. Keen's analysis of the circuit;
+`fx_tests` measures it), or pushed by the playing in Auto, as an envelope filter does.
 
 A **double track** plays every note again on a second guitar, 5 to 25 ms off the first and a
 little harder or softer, and pans the two takes apart: an overdubbed part.
@@ -94,10 +103,10 @@ A render is measured at the level the group's stems sat at (their median RMS): l
 flatness floors every bin at an absolute 1e-10, so it depends on level, and the gate has to
 match it. The presets were fitted that way, with the output limiter out of the way.
 
-Twenty of the 27 gated presets pass on the plain ranges. Seven high-gain presets ("Arena
-sustain", "Brown humbucker", "Rainy-city crunch", "Offset distortion", "Ragged tweed fuzz",
-"Glide wall", "Fuzz wall lead") measure 0.6 to 3.7 dB more tonal (lower flatness) than their
-records, and "Rainy-city crunch" 0.05 dB brighter above 3 kHz; nothing physical closed the gap,
+Of the 35 gated presets, 27 pass on the plain ranges. Eight high-gain presets ("Arena sustain",
+"Brown humbucker", "Rainy-city crunch", "Offset distortion", "Ragged tweed fuzz", "Glide wall",
+"Fuzz wall lead", "Fuzzy logic fuzz") measure 0.6 to 3.7 dB more tonal (lower flatness) than
+their records, and "Rainy-city crunch" 0.05 dB brighter above 3 kHz; nothing physical closed the gap,
 not even a -40 dB noise floor into full gain. The cause is not established: the separated stems
 carry cymbal bleed and separation artefacts that raise flatness on dense rock mixes, or the
 distortion models are too clean, or both. Those presets carry a written allowance in

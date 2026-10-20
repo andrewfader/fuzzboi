@@ -564,7 +564,7 @@ inline const std::vector<Preset>& all() {
       // damp day.
       {"Open-tuned flat-top (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 0}, {kGuitarTuning, 3}, {kGuitarPick, 0.91}, {kGuitarPluck, 148},
                                      {kRoomSize, 3}, {kRoomAbsorption, 0.2}, {kMicDistance, 2.09}, {kHumidity, 0.6}, {kTemperature, 15},
-                                     {kReleaseMs, 1200}, {kSustain, 0}, {kDecayMs, 4000}, {kNoiseFloor, -71}, {kMasterDb, -0.8}}},
+                                     {kReleaseMs, 1200}, {kSustain, 0}, {kDecayMs, 4000}, {kNoiseFloor, -71}, {kMasterDb, -0.7}}},
       // A single coil played with the fingers right by the bridge, both pickups, into a clean tweed amp
       // with a slapback, a figure-8 two metres back, the amp's hiss under it.
       {"Fingered single-coil (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 2}, {kGuitarPickup, 3}, {kGuitarPick, 0.81}, {kGuitarPluck, 30},
@@ -686,6 +686,55 @@ inline const std::vector<Preset>& all() {
       {"Cassette acoustic (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 0}, {kGuitarPick, 0.6}, {kGuitarPluck, 100},
                                          {kMachineWow, 0.45}, {kMachineFlutter, 0.3}, {kGenerations, 3}, {kMachineHiss, 0.25}, {kMachineBandwidth, 6000},
                                          {kRoomSize, 2}, {kRoomAbsorption, 0.35}, {kMicDistance, 0.5}, {kReleaseMs, 900}, {kSustain, 0}, {kDecayMs, 3500}, {kMasterDb, -2.1}}},
+      // --- the eighth round: presets for the second batch of records (more of them gated) -------
+      // A humbucker on both pickups, picked far up the string, into a cranked British stack, an omni
+      // two metres back in a live room, partly overdubbed: crunchy power pop.
+      {"Power-pop crunch (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 3}, {kGuitarPickup, 1}, {kGuitarPick, 0.9}, {kGuitarPluck, 168},
+                                  {kFuzz, 0.75}, {kFuzzMode, 3}, {kFuzzTone, 0.7}, {kCabinet, 0.9}, {kCabType, 1}, {kDoubleTrack, 0.25},
+                                  {kRoomSize, 3}, {kRoomAbsorption, 0.3}, {kMicDistance, 1.97}, {kMicPattern, 0}, {kReleaseMs, 250}, {kSustain, 0.7}, {kNoiseFloor, -54}, {kMasterDb, -7.6}}},
+      // A semi-hollow on both pickups into a driven tweed amp through a wah left mostly open and
+      // nudged by the playing, a cardioid three metres back in a live room: chiming baggy guitar.
+      {"Baggy semi-hollow (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 12}, {kGuitarPickup, 3}, {kGuitarPick, 0.85}, {kGuitarPluck, 56},
+                                   {kWah, 0.4}, {kWahPedal, 0.9}, {kWahAuto, 0.35}, {kFuzz, 0.7}, {kFuzzMode, 3}, {kCabinet, 0.96}, {kCabType, 0},
+                                   {kChorusMix, 0}, {kChorusMode, 0}, {kDoubleTrack, 0.07},
+                                   {kRoomSize, 3}, {kRoomAbsorption, 0.31}, {kMicDistance, 2.96}, {kMicPattern, 1}, {kReleaseMs, 300}, {kSustain, 0.5}, {kNoiseFloor, -42}, {kMasterDb, -7.0}}},
+      // A single coil's neck pickup, picked softly, through an auto-wah that the playing opens and a
+      // little drive into a tweed, a cardioid in a booth: dance-floor funk chops.
+      {"Funk wah chops (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 2}, {kGuitarPickup, 0}, {kGuitarPick, 0.29}, {kGuitarPluck, 106}, {kGuitarMute, 0.3},
+                                {kWah, 1}, {kWahPedal, 0.55}, {kWahAuto, 0.7}, {kCabinet, 0.96}, {kCabType, 0},
+                                {kRoomSize, 1}, {kRoomAbsorption, 0.35}, {kMicDistance, 1.84}, {kMicPattern, 1}, {kReleaseMs, 120}, {kSustain, 0.4}, {kNoiseFloor, -41}, {kFuzz, 0.45}, {kDoubleTrack, 0}, {kMasterDb, -6.0}}},
+      // An offset picked softly up the string into a full muff and a British stack, an omni close in a
+      // live room, partly overdubbed: bright, scooped fuzz.
+      {"Fuzzy logic fuzz (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 10}, {kGuitarPickup, 2}, {kGuitarPick, 0.29}, {kGuitarPluck, 176},
+                                  {kFuzz, 1}, {kFuzzMode, 0}, {kFuzzTone, 0.7}, {kCabinet, 1}, {kCabType, 1}, {kDoubleTrack, 0.3},
+                                  {kRoomSize, 3}, {kRoomAbsorption, 0.5}, {kMicDistance, 0.49}, {kMicPattern, 0}, {kReleaseMs, 250}, {kSustain, 0.8}, {kNoiseFloor, -40}, {kMasterDb, -9.8}}},
+      // A fibreglass hollow body on both pickups, picked medium near the bridge, into a tone bender
+      // and a tweed, one omni microphone in a dead booth: mono garage blues.
+      {"Garage blues fuzz (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 11}, {kGuitarPickup, 1}, {kGuitarPick, 0.5}, {kGuitarPluck, 40},
+                                   {kFuzz, 0.85}, {kFuzzMode, 2}, {kFuzzTone, 0.35}, {kCabinet, 1}, {kCabType, 0},
+                                   {kRoomSize, 1}, {kRoomAbsorption, 0.7}, {kMicDistance, 0.8}, {kMicPattern, 0}, {kReleaseMs, 200}, {kSustain, 0.8}, {kNoiseFloor, -41}, {kMicSetup, 1}, {kMasterDb, -10.0}}},
+      // A single coil's bridge pickup picked with the flesh far up the string into a cranked small
+      // tweed amp, a figure-8 close in, two takes wide: the thin, driven downtown sound.
+      {"Downtown thin crunch (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 2}, {kGuitarPickup, 2}, {kGuitarPick, 0.05}, {kGuitarPluck, 160},
+                                      {kFuzz, 0.8}, {kFuzzMode, 3}, {kFuzzTone, 0.65}, {kCabinet, 1}, {kCabType, 0},
+                                      {kRoomSize, 3}, {kRoomAbsorption, 0.5}, {kMicDistance, 0.2}, {kMicPattern, 2}, {kReleaseMs, 120}, {kSustain, 0.6}, {kNoiseFloor, -40}, {kDoubleTrack, 1}, {kMasterDb, -2.8}}},
+      // A P-90 thinline on both pickups, picked hard by the bridge, a hint of drive into a tweed with
+      // a dotted echo, an omni two metres back in a church-sized room, partly overdubbed.
+      {"Casino delay arpeggio (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 13}, {kGuitarPickup, 1}, {kGuitarPick, 1}, {kGuitarPluck, 35},
+                                       {kFuzz, 0.15}, {kFuzzMode, 3}, {kCabinet, 0.9}, {kCabType, 0}, {kEchoMix, 0.25}, {kEchoSync, 1}, {kEchoDivision, 2},
+                                       {kEchoFeedback, 0.3}, {kRoomSize, 6}, {kRoomAbsorption, 0.09}, {kMicDistance, 1.97}, {kMicPattern, 0},
+                                       {kReleaseMs, 500}, {kSustain, 0}, {kDecayMs, 3000}, {kNoiseFloor, -41}, {kDoubleTrack, 0.68}, {kChorusMix, 0.09}, {kMasterDb, -7.1}}},
+      // A plate-bridge single coil into a germanium fuzz and a British stack with chorus and a short
+      // echo, a figure-8 back in a small cold room, partly overdubbed.
+      {"Cold-room chorus (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 9}, {kGuitarPickup, 2}, {kGuitarPick, 0.67}, {kGuitarPluck, 50},
+                                  {kFuzz, 0.45}, {kFuzzMode, 1}, {kFuzzTone, 0.4}, {kCabinet, 0.9}, {kCabType, 1}, {kChorusMix, 0.3}, {kChorusMode, 1},
+                                  {kEchoMix, 0.15}, {kEchoTime, 280}, {kRoomSize, 2}, {kRoomAbsorption, 0.16}, {kMicDistance, 1.72}, {kMicPattern, 2},
+                                  {kTemperature, 12}, {kReleaseMs, 250}, {kSustain, 0.6}, {kNoiseFloor, -74}, {kDoubleTrack, 0.65}, {kMasterDb, -11.6}}},
+      // Not gated (the corpus's separation folded these near-mono 60s records' rhythm section into
+      // the guitar): a hollow body into a tone bender and a top-boost amp, mono.
+      {"Freakbeat bender (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 11}, {kGuitarPickup, 2}, {kGuitarPick, 0.95}, {kGuitarPluck, 50},
+                                  {kFuzz, 0.8}, {kFuzzMode, 2}, {kFuzzTone, 0.6}, {kCabinet, 1}, {kCabType, 2},
+                                  {kRoomSize, 2}, {kRoomAbsorption, 0.3}, {kMicDistance, 0.6}, {kMicPattern, 1}, {kReleaseMs, 200}, {kSustain, 0.7}, {kMasterDb, -13.5}}},
   };
   return table;
 }

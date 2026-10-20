@@ -30,11 +30,14 @@ KNOBS = {
     'Chorus mix': (0.0, 0.6, 0.15, None),
     'Reverb mix': (0.0, 0.5, 0.15, None),
     'Noise floor': (-100, -40, 10, None),
+    'Wah pedal': (0.0, 1.0, 0.2, None),
+    'Wah auto': (0.0, 1.0, 0.2, None),
 }
 SETS = {
     'amp': ['Noise floor', 'Pick', 'Pluck point', 'Pickup', 'Fuzz', 'Fuzz tone', 'Cabinet', 'Mic distance', 'Mic pattern', 'Room', 'Absorption', 'Double track'],
     'clean': ['Noise floor', 'Pick', 'Pluck point', 'Pickup', 'Cabinet', 'Mic distance', 'Mic pattern', 'Room', 'Absorption', 'Double track', 'Chorus mix'],
     'acoustic': ['Noise floor', 'Pick', 'Pluck point', 'Mic distance', 'Mic pattern', 'Room', 'Absorption', 'Double track'],
+    'wah': ['Noise floor', 'Pick', 'Pluck point', 'Pickup', 'Fuzz', 'Cabinet', 'Mic distance', 'Mic pattern', 'Room', 'Absorption', 'Double track', 'Wah pedal', 'Wah auto', 'Chorus mix'],
     'tape': ['Noise floor', 'Pick', 'Pluck point', 'Pickup', 'Fuzz', 'Fuzz tone', 'Cabinet', 'Mic distance', 'Mic pattern', 'Room', 'Absorption', 'Double track', 'Bandwidth', 'Tape drive'],
 }
 

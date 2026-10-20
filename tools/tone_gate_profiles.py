@@ -13,8 +13,8 @@ import statistics
 import sys
 
 # Groups whose separated guitar stems the corpus analysis found unreliable (other instruments in
-# the stem) are not gated against.
-SKIP = {'OTC', 'Beatles', 'GBV_all'}
+# the stem, or on near-mono 60s masters the rhythm section folded into it) are not gated against.
+SKIP = {'OTC', 'Beatles', 'GBV_all', 'NewYorkPublicLibrary'}
 FEATURES = [
     ('centroid_hz', 'features.spectral.centroid_hz'),
     ('rolloff85_hz', 'features.spectral.rolloff85_hz'),
