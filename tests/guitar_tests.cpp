@@ -167,6 +167,87 @@ SCENARIO(the_bass_vi_is_a_guitar_an_octave_down) {
   CHECK(std::abs(1200.0 * std::log2(hz / 55.0)) < 5.0, spec::fmt("A1 sounds at %.2f Hz", hz));
 }
 
+// Magnitude of the strongest component within +-span cents of `hz` (the peak_hz scan's value).
+double level_near(const std::vector<float>& x, double from_s, double length_s, double hz, double span = 15.0) {
+  const size_t a = static_cast<size_t>(from_s * kRate), n = static_cast<size_t>(length_s * kRate);
+  double best = 0.0;
+  for (double c = -span; c <= span; c += 0.5) {
+    const double f = hz * std::exp2(c / 1200.0), step = kTau * f / kRate;
+    double re = 0.0, im = 0.0;
+    for (size_t i = 0; i < n && a + i < x.size(); ++i) {
+      const double w = 0.5 - 0.5 * std::cos(kTau * static_cast<double>(i) / static_cast<double>(n - 1));
+      re += w * x[a + i] * std::cos(step * static_cast<double>(i));
+      im -= w * x[a + i] * std::sin(step * static_cast<double>(i));
+    }
+    best = std::max(best, std::sqrt(re * re + im * im));
+  }
+  return best;
+}
+
+SCENARIO(a_twelve_string_sounds_every_course_twice) {
+  GIVEN("the electric twelve-string (EXL150, pairs reversed) and the acoustic twelve-string (EJ38), in standard tuning");
+  THEN("each second string, plucked alone, reads on a tuner its course's note plus the course interval and the few cents the player left it off, within 3 cents");
+  double worst = 0.0;
+  for (int model : {kElectric12, kAcoustic12})
+    for (int c = 0; c < kStrings; ++c) {
+      Guitar g = make(model);
+      const GuitarSpec& spec = g.guitar();
+      g.pluck_string(c + kStrings, 0, 0.1, 9);
+      const auto out = run(g, 1.6);
+      const double want = midi_to_hz(g.open_note(c) + spec.course_interval[static_cast<size_t>(c)]) * cents_ratio(spec.course_cents[static_cast<size_t>(c)]);
+      const double cents = 1200.0 * std::log2(peak_hz(out, 0.3, 1.2, want) / want);
+      if (std::abs(cents) > 3.0) std::printf("    model %d course %d second string: %+.1f cents\n", model, c, cents);
+      worst = std::max(worst, std::abs(cents));
+    }
+  CHECK(worst <= 3.0, spec::fmt("worst second string %.1f cents", worst));
+  WHEN("a key plucks a course, and separately each of its two strings is plucked alone: the first as the pick meets it, the second as it meets it later and a little softer");
+  THEN("the course is the two strings sounding together: the sum of the two alone is within 15 dB of the course (pairs tuned in octaves and unisons are the strings that couple most through the bridge, so not closer), and the second string carries within 12 dB of the first's level");
+  bool second = true;
+  for (int model : {kElectric12, kAcoustic12})
+    for (int c = 0; c < kStrings; ++c) {
+      Guitar course = make(model), first = make(model), later = make(model);
+      const GuitarSpec& spec = course.guitar();
+      const int first_string = spec.octave_first ? c + kStrings : c, later_string = spec.octave_first ? c : c + kStrings;
+      const double velocity = 0.6;
+      course.pluck(c, 0, velocity, 11);
+      first.pluck_string(first_string, 0, velocity, 11);
+      const auto a = run(course, 1.0), f = run(first, 1.0);
+      const size_t gap = static_cast<size_t>(std::max(1, static_cast<int>(spec.course_gap_s * (1.3 - 0.6 * velocity) * kRate)));
+      const auto lead = run(later, static_cast<double>(gap) / kRate);
+      later.pluck_string(later_string, 0, 0.85 * velocity, 11u ^ 0x9e3779b9u);
+      auto l = run(later, 1.0 - static_cast<double>(lead.size()) / kRate);
+      l.insert(l.begin(), lead.begin(), lead.end());
+      std::vector<float> residual(a.size());
+      for (size_t i = 0; i < a.size() && i < l.size(); ++i) residual[i] = a[i] - f[i] - l[i];
+      const double fit = measure::db(measure::rms(Span(residual, 2400, 24000))) - measure::db(measure::rms(Span(a, 2400, 24000)));
+      const double level = measure::db(measure::rms(Span(l, 2400, 24000))) - measure::db(measure::rms(Span(f, 2400, 24000)));
+      if (fit > -15.0 || level < -12.0) std::printf("    model %d course %d: residual %+.1f dB, second string %+.1f dB\n", model, c, fit, level);
+      second = second && fit <= -15.0 && level >= -12.0;
+    }
+  CHECK(second, "the second strings sound");
+  WHEN("one course is plucked, and separately the string the pick meets first is plucked alone with the same pluck");
+  THEN("the two renders agree sample for sample until the pick reaches the second string 1 to 4 ms later: the main string first on the electric (Rickenbacker's reversed pairs), the octave string first on the acoustic");
+  for (auto [model, first] : {std::pair{kElectric12, 2}, std::pair{kAcoustic12, 2 + kStrings}}) {
+    Guitar course = make(model), alone = make(model);
+    course.pluck(2, 0, 0.6, 21);
+    alone.pluck_string(first, 0, 0.6, 21);
+    const auto a = run(course, 0.02), b = run(alone, 0.02);
+    size_t split = a.size();
+    for (size_t i = 0; i < a.size(); ++i) if (std::abs(a[i] - b[i]) > 1e-7f) { split = i; break; }
+    const double ms = 1000.0 * static_cast<double>(split) / kRate;
+    CHECK(ms >= 1.0 && ms <= 4.0, spec::fmt("model %.0f: second string joins at %.2f ms", static_cast<double>(model), ms));
+  }
+  WHEN("the key is let go half a second in, with a 50 ms release");
+  THEN("both strings of the course are damped: 0.3 s later the guitar is more than 50 dB down on the note");
+  Guitar g = make(kElectric12);
+  g.pluck(3, 2, 0.8, 4);
+  const auto held = run(g, 0.5);
+  g.release(3, 0.05);
+  const auto after = run(g, 0.5);
+  const double drop = measure::db(measure::rms(Span(after, after.size() - 4800, 4800))) - measure::db(measure::rms(Span(held, 4800, 9600)));
+  CHECK(drop < -50.0, spec::fmt("course down %.1f dB", drop));
+}
+
 SCENARIO(frets_are_equal_tempered_and_the_saddle_is_compensated_like_a_real_one) {
   GIVEN("each guitar's neck: frets at the equal-tempered positions, the action and nut height, the strings' stiffness");
   THEN("the 12th fret is an exact octave, every fret up to the 15th is within 10 cents of equal temperament, and the first fret reads sharp (the nut's height)");

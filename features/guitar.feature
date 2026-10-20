@@ -32,6 +32,17 @@ Feature: The physical guitar is a real guitar, simulated
     When a bass note below a guitar's range is asked for
     Then the bass plays it where it is, where a guitar takes it up an octave
 
+  # a_twelve_string_sounds_every_course_twice
+  Scenario: A twelve-string sounds every course twice
+    Given the electric twelve-string (EXL150, pairs reversed) and the acoustic twelve-string (EJ38), in standard tuning
+    Then each second string reads its course's note plus the course interval and the player's few cents, within 3 cents
+    When a key plucks a course, against each of its two strings plucked alone as the pick meets them
+    Then the course is the two strings together, within 15 dB (octave and unison pairs couple most through the bridge), and the second string carries within 12 dB of the first
+    When one course is plucked, against the string the pick meets first plucked alone
+    Then the second string joins 1 to 4 ms later: the main string first on the electric, the octave first on the acoustic
+    When the key is let go with a 50 ms release
+    Then both strings of the course are damped, more than 50 dB down 0.3 s later
+
   # frets_are_equal_tempered_and_the_saddle_is_compensated_like_a_real_one
   Scenario: Frets are equal-tempered and the saddle is compensated like a real one
     Given each guitar's neck, action, nut height and string stiffness

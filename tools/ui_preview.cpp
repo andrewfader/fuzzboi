@@ -167,6 +167,21 @@ int main(int argc, char** argv) {
     editor.draw(canvas);
     write_ppm(display, pixmap, w, h, out_dir + "/menu.ppm");
   }
+  // And the header's preset catalogue, the longest menu, which packs its rows to stay inside.
+  editor.pointer(PointerAction::Down, 1, 2, 2, 0, now);
+  editor.pointer(PointerAction::Up, 1, 2, 2, 0, now);
+  for (int tick = 0; tick < 10; ++tick) editor.tick(now += 16.0);
+  {
+    const Rect header = editor.header_control_rect();
+    editor.pointer(PointerAction::Down, 1, header.x + 50, header.y + 20, 0, now);
+    editor.pointer(PointerAction::Up, 1, header.x + 50, header.y + 20, 0, now);
+  }
+  for (int tick = 0; tick < 40; ++tick) editor.tick(now += 16.0);
+  {
+    X11Canvas canvas(display, pixmap, gc, xft, fonts, w, h);
+    editor.draw(canvas);
+    write_ppm(display, pixmap, w, h, out_dir + "/presets.ppm");
+  }
   for (auto* font : fonts) if (font) XftFontClose(display, font);
   XftDrawDestroy(xft);
   XFreeGC(display, gc);

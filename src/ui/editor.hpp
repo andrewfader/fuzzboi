@@ -271,6 +271,9 @@ inline LaneGeometry lane_geometry(const Rect& r) {
 constexpr int menu_rows = 16;
 constexpr int menu_item_height = 34;
 constexpr int menu_column_width = 290;
+// A catalogue too long for the window at full row height (the preset menu) packs its rows closer,
+// down to this, rather than leaving the window.
+constexpr int menu_item_min_height = 24;
 
 // --- the editor --------------------------------------------------------------------------------
 
@@ -680,7 +683,7 @@ class Editor {
     const int count = option_count(param);
     const int rows = menu_row_count(count);
     const int columns = (count + rows - 1) / rows;
-    Rect r{anchor.x, anchor.bottom() + 4, columns * menu_column_width + 16, rows * menu_item_height + 16};
+    Rect r{anchor.x, anchor.bottom() + 4, columns * menu_column_width + 16, rows * menu_row_height(count) + 16};
     r.x = std::clamp(r.x, margin, width - margin - r.w);
     if (r.bottom() > content_bottom) r.y = std::max(header_rect.bottom(), anchor.y - r.h - 4);
     if (r.bottom() > height - 4) r.y = std::max(4, height - 4 - r.h);
@@ -693,11 +696,17 @@ class Editor {
     constexpr int max_columns = (width - 2 * margin - 16) / menu_column_width;
     return std::min(count, std::max(menu_rows, (count + max_columns - 1) / max_columns));
   }
+  // Each row's height: the full height, unless the menu would then be taller than the window.
+  static int menu_row_height(int count) {
+    const int rows = menu_row_count(count);
+    return std::clamp((height - 8 - 16) / std::max(rows, 1), menu_item_min_height, menu_item_height);
+  }
   Rect menu_item_rect(int index) const {
-    const int rows = menu_row_count(option_count(menu_.param));
+    const int count = option_count(menu_.param);
+    const int rows = menu_row_count(count), item = menu_row_height(count);
     const int column = index / rows, row = index % rows;
-    return Rect{menu_.rect.x + 8 + column * menu_column_width, menu_.rect.y + 8 + row * menu_item_height,
-                menu_column_width - 6, menu_item_height - 2};
+    return Rect{menu_.rect.x + 8 + column * menu_column_width, menu_.rect.y + 8 + row * item,
+                menu_column_width - 6, item - 2};
   }
   int menu_item_at(int x, int y) const {
     if (menu_.param < 0 || !menu_.rect.contains(x, y)) return -1;

@@ -113,6 +113,8 @@ fuzzboi_test(sources_tests)
 fuzzboi_test(fx_tests)
 fuzzboi_test(engine_tests)
 fuzzboi_test(guitar_tests)
+fuzzboi_test(air_tests)
+fuzzboi_test(tone_gate_tests)
 
 # Suites that load the built .clap and drive it through the public CLAP interfaces, as a host does.
 function(fuzzboi_plugin_test name)
@@ -147,6 +149,19 @@ target_compile_features(fuzzboi-preset-audit PRIVATE cxx_std_20)
 target_include_directories(fuzzboi-preset-audit PRIVATE src tests)
 target_link_libraries(fuzzboi-preset-audit PRIVATE fuzzboi_core)
 fuzzboi_warnings(fuzzboi-preset-audit)
+
+# Measures a recording's guitar-tone features as the quality gate does; a review tool, not a test.
+add_executable(fuzzboi-tone-measure tools/tone_measure.cpp)
+target_compile_features(fuzzboi-tone-measure PRIVATE cxx_std_20)
+target_include_directories(fuzzboi-tone-measure PRIVATE src tests)
+fuzzboi_warnings(fuzzboi-tone-measure)
+
+# Tries a quality-gate preset with changed parameters; a tuning tool, not a test.
+add_executable(fuzzboi-tone-gate-try tools/tone_gate_try.cpp)
+target_compile_features(fuzzboi-tone-gate-try PRIVATE cxx_std_20)
+target_include_directories(fuzzboi-tone-gate-try PRIVATE "${clap_SOURCE_DIR}/include" src tests)
+target_link_libraries(fuzzboi-tone-gate-try PRIVATE fuzzboi_core)
+fuzzboi_warnings(fuzzboi-tone-gate-try)
 
 # Renders single notes of the physical guitar for tools/guitar_critic.py; a review tool, not a test.
 add_executable(fuzzboi-guitar-render tools/guitar_render.cpp)

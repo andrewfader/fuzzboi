@@ -14,6 +14,7 @@
 #include <memory>
 #include <mutex>
 
+#include "dsp/air.hpp"
 #include "dsp/analog_synth.hpp"
 #include "dsp/core.hpp"
 #include "dsp/envelopes.hpp"
@@ -78,7 +79,8 @@ constexpr std::array<double, params::kFmPatchCount> kFmPatchDb{3.5, 5.0, 2.0, 8.
 constexpr std::array<double, params::kTapeBankCount> kTapeBankDb{-1.0, 5.5, 5.0, 3.0};  // user tape: as the collage sampler
 // The guitar's output is a radiated pressure or a pickup voltage in its own units; these bring
 // each instrument to the same footing as the other sources.
-constexpr std::array<double, params::kGuitarModelCount> kGuitarModelDb{0.0, 10.8, 0.0, 0.0, 0.0};
+constexpr std::array<double, params::kGuitarModelCount> kGuitarModelDb{0.0, 10.8, 0.0, 0.0, 0.0,
+                                                                     0.0, 3.5, 0.0, 1.6, 0.0, 0.0, 0.0};
 inline double gain(const std::array<double, params::kSourceCount>& table, int index) {
   return dsp::db_to_gain(table[static_cast<size_t>(std::clamp(index, 0, params::kSourceCount - 1))]);
 }
@@ -115,6 +117,7 @@ class Voice {
   int fm_channel() const { return fm_channel_; }
   // The guitar string this voice is fretting (-1: none, or it was taken by a later note).
   int guitar_string() const { return guitar_string_; }
+  int guitar_note() const { return guitar_note_; }
   void drop_string() { guitar_string_ = -1; }
   // The pitch the voice wants as a multiple of the note its string is fretted at: glide, bend,
   // vibrato, fine tune and unison detune, which the guitar applies to the string.
@@ -372,6 +375,9 @@ class Engine {
     for (auto& m : machine_) m.prepare(rate);
     feedback_.prepare(rate);
     guitar_.prepare(rate);
+    second_.prepare(rate);
+    room_.prepare(rate);
+    noise_fall_ = static_cast<float>(std::exp(std::log(1e-4) / (0.3 * rate)));
     pump_.prepare(rate);
     limiter_.prepare(rate);
     master_.set_time(10.0, rate);
@@ -390,6 +396,12 @@ class Engine {
     shimmer_back_ = 0.0f;
     feedback_.clear();
     guitar_.reset();
+    second_.reset();
+    take_count_ = 0;
+    take_string_.fill(-1);
+    room_.reset();
+    noise_gate_ = noise_key_ = 0.0f;
+    hum_phase_ = 0.0;
     pump_.reset();
     limiter_.reset();
     bend_.fill(0.0); wheel_.fill(0.0); sustain_.fill(false);
@@ -512,6 +524,7 @@ class Engine {
         // The fretting hand lets go: damped over the release time, or left ringing on the pedal.
         if (pedal) guitar_.let_ring(v.guitar_string());
         else { guitar_.release(v.guitar_string(), s[params::kReleaseMs] * 0.001); v.drop_string(); }
+        if (!pedal && s[params::kDoubleTrack] > 0.0) take_note(false, v.guitar_note(), 0.0, 0);
       }
     }
   }
@@ -524,7 +537,11 @@ class Engine {
     held_count_ = 0;
     pending_count_ = 0;
   }
-  void all_sound_off() { for (auto& v : voices_) v.kill(); fm_in_use_.fill(false); fm_.reset(); guitar_.reset(); held_keys_.fill(false); held_count_ = 0; pending_count_ = 0; }
+  void all_sound_off() {
+    for (auto& v : voices_) v.kill();
+    fm_in_use_.fill(false); fm_.reset(); guitar_.reset(); second_.reset(); take_count_ = 0;
+    held_keys_.fill(false); held_count_ = 0; pending_count_ = 0;
+  }
   int pending_notes() const { return pending_count_; }
   void sustain(int16_t channel, bool down) {
     const size_t ch = static_cast<size_t>(std::clamp<int>(channel, 0, 15));
@@ -544,7 +561,7 @@ class Engine {
   double tempo() const { return tempo_; }
 
   int active_voices() const { int n = 0; for (const auto& v : voices_) n += v.active(); return n; }
-  bool silent() const { return active_voices() == 0 && !fm_.any_keyed() && !guitar_.awake(); }
+  bool silent() const { return active_voices() == 0 && !fm_.any_keyed() && !guitar_.awake() && !second_.awake() && take_count_ == 0; }
   // The physical guitar, for inspection (tests, the critic).
   const dsp::guitar::Guitar& guitar() const { return guitar_; }
   float peak_left() const { return peak_l_; }
@@ -573,6 +590,16 @@ class Engine {
     const auto chorus_mode = static_cast<dsp::ChorusMode>(std::clamp(static_cast<int>(s[params::kChorusMode]), 0, 4));
     const auto cab_type = static_cast<dsp::CabType>(std::clamp(static_cast<int>(s[params::kCabType]), 0, 2));
     guitar_.configure(guitar_setup(s));
+    second_.configure(guitar_setup(s));
+    room_.configure(room_settings(s));
+    const float noise_level = s[params::kNoiseFloor] > -119.5 ? static_cast<float>(dsp::db_to_gain(s[params::kNoiseFloor])) : 0.0f;
+    // Hum against hiss: a single coil's hum stands about 10 dB over a quiet preamp's hiss.
+    const float hum_gain = s.source() == params::kSourceGuitar ? static_cast<float>(3.0 * guitar_.hum_sensitivity()) : 0.0f;
+    // A double-tracked part: the first take panned one way, the second the other, equal power.
+    const double doubled = std::clamp(s[params::kDoubleTrack], 0.0, 1.0);
+    const double first_angle = 0.25 * dsp::kPi * (1.0 - doubled), second_angle = 0.25 * dsp::kPi * (1.0 + doubled);
+    const float first_l = static_cast<float>(std::sqrt(2.0) * std::cos(first_angle)), first_r = static_cast<float>(std::sqrt(2.0) * std::sin(first_angle));
+    const float second_l = static_cast<float>(std::sqrt(2.0) * std::cos(second_angle)), second_r = static_cast<float>(std::sqrt(2.0) * std::sin(second_angle));
     release_s_ = s[params::kReleaseMs] * 0.001;
     const float guitar_trim = static_cast<float>(
         dsp::db_to_gain(levels::kGuitarModelDb[static_cast<size_t>(std::clamp(static_cast<int>(s[params::kGuitarModel]), 0, params::kGuitarModelCount - 1))]) *
@@ -602,10 +629,50 @@ class Engine {
       // The FM chip renders all its channels at once; voices only drive its registers.
       const float fm_out = fm_.render() * fm_trim;
       l += fm_out; r += fm_out;
-      // So does the guitar: six strings and one body, whichever voices are fretting them.
+      // The second take's notes whose moment has come.
+      for (int t = 0; t < take_count_;) {
+        const TakeEvent e = take_[static_cast<size_t>(t)];
+        if (e.due > clock_) { ++t; continue; }
+        take_[static_cast<size_t>(t)] = take_[static_cast<size_t>(--take_count_)];
+        int& string = take_string_[static_cast<size_t>(e.note)];
+        if (e.on) {
+          if (string >= 0) second_.release(string, 0.05);
+          const auto f = second_.finger(e.note);
+          if (f.string >= 0) { second_.pluck(f.string, f.fret, e.velocity, e.seed); string = f.string; }
+        } else if (string >= 0) {
+          second_.release(string, release_s_);
+          string = -1;
+        }
+      }
+      // So does the guitar: six strings and one body, whichever voices are fretting them; and
+      // the second guitar of a double-tracked part.
       const float guitar_out = guitar_.render() * guitar_trim;
-      l += guitar_out; r += guitar_out;
+      if (doubled > 0.0) {
+        const float second_out = second_.render() * guitar_trim;
+        l += guitar_out * first_l + second_out * second_l;
+        r += guitar_out * first_r + second_out * second_r;
+      } else {
+        l += guitar_out; r += guitar_out;
+      }
       // Pedals and tape: mono effects run once per side so unison width survives.
+      // The amplifier's noise floor, at its input so its gain and pedals raise it as they raise the
+      // instrument: the preamp's hiss, and the mains hum single-coil pickups catch (60 Hz and the
+      // buzz of its harmonics). A gate keyed on the instrument lets it through while the playing
+      // stands 6 dB over it and closes over 300 ms after, as a player's gate pedal does.
+      if (noise_level > 0.0f) {
+        const float level = std::max(std::abs(l), std::abs(r));
+        noise_key_ = std::max(level, noise_key_ * noise_fall_);
+        noise_gate_ = noise_key_ > 2.0f * noise_level ? 1.0f : noise_gate_ * noise_fall_;
+        if (noise_gate_ > 1e-4f) {
+          hum_phase_ += 60.0 / rate_;
+          if (hum_phase_ >= 1.0) hum_phase_ -= 1.0;
+          float buzz = 0.0f;
+          for (int n = 1; n <= 8; ++n) buzz += static_cast<float>(std::sin(dsp::kTau * n * hum_phase_) / n);
+          const float hiss = noise_rng_.bipolar() * 1.7320508f;  // unit RMS
+          const float noise = noise_gate_ * noise_level * (hiss + hum_gain * buzz);
+          l += noise; r += noise;
+        }
+      }
       const float mono = (l + r) * 0.5f;
       const float howl = feedback_.process(mono, s[params::kFeedbackAmount], static_cast<int>(s[params::kFeedbackHarmonic]), s[params::kFeedbackSwell], feedback_hz) - mono;
       l += howl; r += howl;
@@ -631,6 +698,9 @@ class Engine {
       r = echo_[1].process(r, s[params::kEchoMix], echo_seconds, s[params::kEchoFeedback], heads, s[params::kEchoWow], s[params::kEchoSaturate], s[params::kEchoAge]);
       l = spring_[0].process(l, s[params::kSpringMix], s[params::kSpringTension], s[params::kSpringDrip]);
       r = spring_[1].process(r, s[params::kSpringMix], s[params::kSpringTension], s[params::kSpringDrip]);
+      // The microphone in the room hears the amplifier (or the instrument) through the air; the
+      // studio's chamber and the tape come after it.
+      room_.process(l, r);
       float send_l = 0.0f, send_r = 0.0f;
       l = wall_[0].process(l, s[params::kWall], s[params::kWallChamber], s[params::kWallSquash], &send_l);
       r = wall_[1].process(r, s[params::kWall], s[params::kWallChamber], s[params::kWallSquash], &send_r);
@@ -693,6 +763,12 @@ class Engine {
       if (s[params::kEchoFeedback] >= 1.0) seconds += 30.0;  // runaway: the host should keep calling
     }
     if (s[params::kSpringMix] > 0.0) seconds += 3.0;
+    if (s[params::kRoomSize] >= 1.0) {
+      dsp::air::Room probe;
+      probe.prepare(1000.0);
+      probe.configure(room_settings(s));
+      seconds += probe.rt60_low() + 0.6;
+    }
     if (s[params::kVerbMix] > 0.0 || s[params::kWall] > 0.0) seconds += 2.0 + 8.0 * s[params::kVerbSize] + 6.0 * s[params::kVerbShimmer];
     if (s[params::kBackwardsMix] > 0.0) seconds += 2.0 * s[params::kBackwardsChunk] * 0.001;
     if (s[params::kFeedbackAmount] > 0.0) seconds += s[params::kFeedbackSwell] * 0.001 + 1.0;
@@ -716,7 +792,20 @@ class Engine {
     g.mute = s[params::kGuitarMute];
     g.age = s[params::kGuitarAge];
     g.position = static_cast<int>(std::lround(s[params::kGuitarPosition]));
+    g.humidity = s[params::kHumidity];
+    g.celsius = s[params::kTemperature];
     return g;
+  }
+
+  static dsp::air::Room::Settings room_settings(const Settings& s) {
+    dsp::air::Room::Settings r;
+    r.volume_m3 = params::kRoomVolumes[static_cast<size_t>(std::clamp(static_cast<int>(std::lround(s[params::kRoomSize])), 0, params::kRoomSizeCount - 1))];
+    r.absorption = s[params::kRoomAbsorption];
+    r.distance_m = s[params::kMicDistance];
+    r.humidity = s[params::kHumidity];
+    r.celsius = s[params::kTemperature];
+    r.pattern = static_cast<int>(std::lround(s[params::kMicPattern]));
+    return r;
   }
 
   static dsp::FmControls fm_controls(const Settings& s) {
@@ -819,6 +908,17 @@ class Engine {
     guitar_.pluck(f.string, f.fret, strength, start.seed);
     start.guitar_string = f.string;
     start.guitar_note = f.note;
+    if (s[params::kDoubleTrack] > 0.0) take_note(true, f.note, strength, start.seed);
+  }
+
+  // The second take of a double-tracked part: the same notes played again on a second guitar, as a
+  // player overdubbing would, each 5 to 25 ms off the first and a little harder or softer.
+  void take_note(bool on, int note, double strength, uint32_t seed) {
+    if (note < 0 || note > 127 || take_count_ >= static_cast<int>(take_.size())) return;
+    const size_t n = static_cast<size_t>(note);
+    if (on) take_delay_[n] = static_cast<uint32_t>(rate_ * (0.005 + 0.020 * take_rng_.unipolar()));
+    const double velocity = std::clamp(strength * (1.0 + 0.08 * take_rng_.bipolar()), 0.02, 1.0);
+    take_[static_cast<size_t>(take_count_++)] = {clock_ + take_delay_[n], on, note, velocity, seed ^ 0x51ed270bu};
   }
 
   // The built-in found sounds are deterministic, so one set per sample rate serves every
@@ -848,6 +948,10 @@ class Engine {
   dsp::Chorus chorus_;
   std::array<dsp::Tremolo, 2> tremolo_{};
   dsp::Rotary rotary_;
+  dsp::air::Room room_;
+  dsp::Rng noise_rng_{0x2545f491u};
+  double hum_phase_ = 0.0;
+  float noise_gate_ = 0.0f, noise_key_ = 0.0f, noise_fall_ = 0.99995f;
   std::array<dsp::TapeEcho, 2> echo_{};
   std::array<dsp::SpringReverb, 2> spring_{};
   dsp::Chamber chamber_;
@@ -858,7 +962,13 @@ class Engine {
   std::array<dsp::LoFi, 2> lofi_{};
   std::array<dsp::TapeMachine, 2> machine_{};
   dsp::FeedbackVoice feedback_;
-  dsp::guitar::Guitar guitar_;
+  dsp::guitar::Guitar guitar_, second_;
+  struct TakeEvent { uint64_t due; bool on; int note; double velocity; uint32_t seed; };
+  std::array<TakeEvent, 256> take_{};
+  int take_count_ = 0;
+  std::array<int, 128> take_string_{};
+  std::array<uint32_t, 128> take_delay_{};
+  dsp::Rng take_rng_{0x7a3e1d5bu};
   double release_s_ = 0.12;
   dsp::Pump pump_;
   dsp::Limiter limiter_;
