@@ -49,7 +49,7 @@ inline std::vector<std::vector<double>> stft_power(const std::vector<float>& y, 
   };
   const long frames = 1 + static_cast<long>(y.size()) / hop;
   std::vector<double> window(static_cast<size_t>(n_fft));
-  for (int i = 0; i < n_fft; ++i) window[static_cast<size_t>(i)] = 0.5 - 0.5 * std::cos(2.0 * M_PI * i / n_fft);  // periodic Hann
+  for (int i = 0; i < n_fft; ++i) window[static_cast<size_t>(i)] = 0.5 - 0.5 * std::cos(2.0 * fuzzboi::dsp::kPi * i / n_fft);  // periodic Hann
   std::vector<std::vector<double>> out;
   out.reserve(static_cast<size_t>(frames));
   std::vector<std::complex<double>> buffer(static_cast<size_t>(n_fft));
