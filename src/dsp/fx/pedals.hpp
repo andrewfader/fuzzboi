@@ -1,8 +1,9 @@
-// The pedalboard: fuzz, speaker cabinet, phaser, chorus, rotary speaker and tremolo. Each is a
+// The pedalboard: wah, fuzz, speaker cabinet, phaser, chorus, rotary speaker and tremolo. Each is a
 // small model of the circuit's behaviour rather than a schematic simulation, tuned to the
 // records the genre grew from.
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 
@@ -356,6 +357,43 @@ class Tremolo {
  private:
   Lfo lfo_;
   OnePole edge_;
+};
+
+// The wah: the Cry Baby's inductor-loaded active band-pass (R.G. Keen, "The Technology of the
+// Crybaby Wah"). The treadle turns an audio-taper pot, so the peak sweeps about exponentially from
+// about 450 Hz at the heel to about 2.2 kHz at the toe, its Q falling from about 6 to about 4 as it
+// opens; beside the peak the circuit leaks a little of the low end through. In Auto the treadle
+// follows the playing, as an envelope filter does: harder picking opens it further.
+class Wah {
+ public:
+  void prepare(double sample_rate) {
+    rate_ = sample_rate;
+    attack_ = static_cast<float>(1.0 - std::exp(-1.0 / (0.004 * sample_rate)));
+    release_ = static_cast<float>(1.0 - std::exp(-1.0 / (0.15 * sample_rate)));
+    ic1_ = ic2_ = env_ = 0.0f;
+  }
+  // `mix` blends the pedal in (0 bypassed), `pedal` is the treadle (0 heel, 1 toe), `follow` how far
+  // the playing pushes it toward the toe.
+  float process(float in, double mix, double pedal, double follow) {
+    if (mix <= 0.0) return in;
+    env_ += (std::abs(in) > env_ ? attack_ : release_) * (std::abs(in) - env_);
+    const double position = std::clamp(pedal + follow * std::min(1.0, 4.0 * static_cast<double>(env_)), 0.0, 1.0);
+    const double hz = 450.0 * std::pow(2200.0 / 450.0, position);
+    const double q = 6.0 - 2.0 * position;
+    // A topology-preserving state-variable filter (Zavalishin), band-pass and low-pass taps.
+    const double g = std::tan(kPi * std::min(hz, rate_ * 0.45) / rate_), k = 1.0 / q;
+    const double a1 = 1.0 / (1.0 + g * (g + k)), a2 = g * a1, a3 = g * a2;
+    const double v3 = in - ic2_, v1 = a1 * ic1_ + a2 * v3, v2 = ic2_ + a2 * ic1_ + a3 * v3;
+    ic1_ = static_cast<float>(2.0 * v1 - ic1_);
+    ic2_ = static_cast<float>(2.0 * v2 - ic2_);
+    // The band-pass at unity peak gain over its bandwidth (k), lifted a little as Keen's measured
+    // pedal is (its peak stands well over the dry level), plus the low-end leak.
+    const float wet = static_cast<float>(2.5 * k * v1 + 0.08 * v2);
+    return static_cast<float>(in * (1.0 - mix)) + static_cast<float>(mix) * wet;
+  }
+ private:
+  double rate_ = 48000.0;
+  float attack_ = 0.1f, release_ = 0.001f, ic1_ = 0.0f, ic2_ = 0.0f, env_ = 0.0f;
 };
 
 }  // namespace fuzzboi::dsp

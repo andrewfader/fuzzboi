@@ -72,12 +72,22 @@ enum ParamId : uint32_t {
   // --- appended in the fifth round: the physically modelled guitar ----------------------------------
   kGuitarModel, kGuitarTuning, kGuitarCapo, kGuitarPluck, kGuitarPick, kGuitarPickup, kGuitarMute,
   kGuitarAge, kGuitarPosition,
+  // --- appended in the sixth round: the room and the air the instrument is played in ---------------
+  kRoomSize, kRoomAbsorption, kMicDistance, kHumidity, kTemperature,
+  // --- appended in the eighth round: the microphone's pattern and a second take -------------------
+  kMicPattern, kDoubleTrack,
+  // --- appended in the ninth round: the amplifier's noise floor ----------------------------------
+  kNoiseFloor,
+  // --- appended in the tenth round: the wah ------------------------------------------------------
+  kWah, kWahPedal, kWahAuto,
+  // --- appended in the eleventh round: one microphone or a pair --------------------------------------
+  kMicSetup,
   kParamCount
 };
 
 // How a value is shown to the musician. Stepped parameters with names draw from an option table.
 enum class Unit : uint8_t {
-  Plain, Ms, Seconds, Percent, Db, Hz, Semitones, Cents, Count, Options, Mm
+  Plain, Ms, Seconds, Percent, Db, Hz, Semitones, Cents, Count, Options, Mm, Metres, Celsius
 };
 
 struct ParamSpec {
@@ -125,11 +135,20 @@ constexpr const char* kChorusModeNames[] = {"Juno I", "Juno II", "I+II", "Ensemb
 constexpr const char* kCabTypeNames[] = {"Tweed", "British", "Top boost"};
 // The physical guitar (src/dsp/guitar.hpp): which instrument, how it is tuned, and where the
 // pickups are. The order matches dsp::guitar::Model, kTunings and PickupSelect.
-constexpr int kGuitarModelCount = 5;
-constexpr const char* kGuitarModelNames[kGuitarModelCount] = {"Steel dreadnought", "Nylon classical", "Single-coil solid", "Humbucker solid", "Bass VI"};
+constexpr int kGuitarModelCount = 14;
+constexpr const char* kGuitarModelNames[kGuitarModelCount] = {
+    "Steel dreadnought", "Nylon classical", "Single-coil solid", "Humbucker solid", "Bass VI",
+    "Electric 12-string", "Acoustic 12-string", "Jazz archtop", "Grand auditorium", "Plate single-coil",
+    "Offset short scale", "Fibreglass hollow", "Semi-hollow", "Thinline P-90"};
 constexpr const char* kGuitarTuningNames[] = {"Standard", "Drop D", "Half step down", "DADGAD", "Open G", "Open D", "Open E", "Open C"};
 constexpr const char* kGuitarPickupNames[] = {"Neck", "Middle", "Bridge", "Neck+bridge"};
-constexpr int kPresetCount = 124;  // The names live in presets.hpp; the table only needs the size.
+// The room (src/dsp/air.hpp): its volume, in cubic metres, for each named size.
+constexpr int kRoomSizeCount = 7;
+constexpr const char* kRoomSizeNames[kRoomSizeCount] = {"Off", "Booth", "Bedroom", "Studio", "Club", "Hall", "Church"};
+constexpr std::array<double, kRoomSizeCount> kRoomVolumes{0.0, 10.0, 35.0, 150.0, 600.0, 3000.0, 12000.0};
+constexpr const char* kMicPatternNames[] = {"Omni", "Cardioid", "Figure-8"};
+constexpr const char* kMicSetupNames[] = {"Stereo pair", "Mono"};
+constexpr int kPresetCount = 164;  // The names live in presets.hpp; the table only needs the size.
 
 constexpr std::array<ParamSpec, kParamCount> kSpecs{{
     // voice
@@ -306,6 +325,19 @@ constexpr std::array<ParamSpec, kParamCount> kSpecs{{
     {"Palm mute", "Guitar/Right hand", 0, 1, 0, false, Unit::Percent, nullptr},
     {"String age", "Guitar", 0, 1, 0, false, Unit::Percent, nullptr},
     {"Hand position", "Guitar/Left hand", 0, 12, 0, true, Unit::Count, nullptr},
+    // the room and the air
+    {"Room", "Room", 0, kRoomSizeCount - 1, 0, true, Unit::Options, kRoomSizeNames},
+    {"Absorption", "Room", 0.02, 0.9, 0.25, false, Unit::Percent, nullptr},
+    {"Mic distance", "Room", 0, 12, 0, false, Unit::Metres, nullptr},
+    {"Humidity", "Room/Air", 0.05, 0.95, 0.45, false, Unit::Percent, nullptr},
+    {"Temperature", "Room/Air", -10, 40, 20, false, Unit::Celsius, nullptr},
+    {"Mic pattern", "Room", 0, 2, 0, true, Unit::Options, kMicPatternNames},
+    {"Double track", "Guitar", 0, 1, 0, false, Unit::Percent, nullptr},
+    {"Noise floor", "Guitar", -120, -40, -120, false, Unit::Db, nullptr},
+    {"Wah", "Pedals/Wah", 0, 1, 0, false, Unit::Percent, nullptr},
+    {"Wah pedal", "Pedals/Wah", 0, 1, 0.5, false, Unit::Percent, nullptr},
+    {"Wah auto", "Pedals/Wah", 0, 1, 0, false, Unit::Percent, nullptr},
+    {"Mic setup", "Room", 0, 1, 0, true, Unit::Options, kMicSetupNames},
 }};
 
 // The preset parameter's value names come from the preset table, which lives above this header
@@ -346,6 +378,8 @@ inline bool format_value(uint32_t id, double value, char* out, uint32_t capacity
     case Unit::Cents: std::snprintf(out, capacity, s.min < 0 ? "%+.0f ct" : "%.0f ct", value); break;
     case Unit::Count: std::snprintf(out, capacity, "%.0f", value); break;
     case Unit::Mm: std::snprintf(out, capacity, "%.0f mm", value); break;
+    case Unit::Metres: std::snprintf(out, capacity, value < 1.0 ? "%.2f m" : "%.1f m", value); break;
+    case Unit::Celsius: std::snprintf(out, capacity, "%.0f C", value); break;
     case Unit::Plain:
       if (s.stepped && s.min == 0 && s.max == 1) std::snprintf(out, capacity, value >= 0.5 ? "On" : "Off");
       else if (id == kSampleRoot) {

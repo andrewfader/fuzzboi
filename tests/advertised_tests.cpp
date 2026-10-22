@@ -11,6 +11,7 @@
 //
 //   advertised_tests <FUZZBOI.clap> [name-filter]
 
+#include "../src/dsp/air.hpp"
 #include "../src/dsp/core.hpp"
 #include "../src/params.hpp"
 #include "audio_measure.hpp"
@@ -252,6 +253,23 @@ auto LaterOnset(double expected_ms, double tolerance_ms) {
 }
 
 
+// The tone at a multiple of the note moves by `expected_db`, within `tolerance_db`.
+auto Narrower() {
+  return [](const Render& a, const Render& b) {
+    const double ca = measure::correlation(Span(a.left, 4800, 24000), Span(a.right, 4800, 24000));
+    const double cb = measure::correlation(Span(b.left, 4800, 24000), Span(b.right, 4800, 24000));
+    return cb > ca + 0.05 ? ok() : fail("L/R correlation %.3f -> %.3f is not narrower", ca, cb);
+  };
+}
+
+auto ToneMovesDb(double ratio_of_note, double expected_db, double tolerance_db) {
+  return [=](const Render& a, const Render& b) {
+    const double hz = g_note_hz * ratio_of_note;
+    const double d = measure::db(tone_near(held(b), hz)) - measure::db(tone_near(held(a), hz));
+    return std::abs(d - expected_db) <= tolerance_db ? ok() : fail("tone at the footage moved %.2f dB, expected %.2f", d, expected_db);
+  };
+}
+
 Context ctx(int source, std::vector<Setting> settings = {}, int key = 57) { Context c; c.source = source; c.settings = std::move(settings); c.key = key; return c; }
 const std::vector<Setting> kOpenSynth{{P::kCutoff, 18000}, {P::kFilterEnv, 0}, {P::kOscMix, 0}, {P::kOsc2Detune, 0}, {P::kResonance, 0}};
 
@@ -446,6 +464,40 @@ std::array<Proof, P::kParamCount> proofs() {
   set(kGuitarAge, ctx(kSourceGuitar, {{kGuitarModel, 2}, {kGuitarPickup, 2}}), 0, 1, Darker());
   // A3 is the G string's 2nd fret in the open position and the D string's 7th in the 7th.
   set(kGuitarPosition, ctx(kSourceGuitar), 0, 7, Differs());
+  // the room and the air. A microphone 2 m from a held organ chord in a studio room against none:
+  // the room rings on after the note.
+  set(kRoomSize, ctx(kSourceOrgan, {{kMicDistance, 2.0}}), 0, 3, LongerTail(1.5));
+  // A hall with hard walls against soft ones: the walls take more each bounce, the tail is shorter.
+  set(kRoomAbsorption, ctx(kSourceOrgan, {{kRoomSize, 5}, {kMicDistance, 3.0}}), 0.08, 0.6, ShorterTail(1.5));
+  // The microphone 10 m away in 20 C air: the pluck arrives 10 / 343.2 s = 29.1 ms later.
+  set(kMicDistance, ctx(kSourceGuitar, {{kGuitarModel, 2}}), 0, 10, LaterOnset(29.1, 3.0));
+  // Twelve metres of open air from a saw-tooth A3: the 36th harmonic (7.9 kHz) loses what ISO
+  // 9613-1 gives at 10% humidity and at 70%, and humid air takes less.
+  {
+    const double hz = fuzzboi::dsp::midi_to_hz(57) * 36.0;
+    const double expected = 12.0 * (fuzzboi::dsp::air::absorption_db_per_m(hz, 20.0, 0.1) - fuzzboi::dsp::air::absorption_db_per_m(hz, 20.0, 0.7));
+    set(kHumidity, ctx(kSourceSynth, {{kOsc1Wave, 0}, {kOsc2Wave, 0}, {kCutoff, 18000}, {kFilterEnv, 0}, {kResonance, 0}, {kMicDistance, 12.0}}),
+        0.1, 0.7, ToneMovesDb(36.0, expected, 0.5));
+  }
+  // The open high E (D'Addario PL010, E A = 10.1 kN) tuned at 20 C, played at 40 C: the steel
+  // grows 11.7e-6 per kelvin and the neck 3.8e-6, so the string slackens by about 1.6 N of its
+  // 72 N: half of 2.2% in frequency, about 19 cents flat.
+  set(kTemperature, ctx(kSourceGuitar, {{kGuitarModel, 2}, {kGuitarPickup, 2}}, 64), 20, 40, PitchCents(-19.0, 4.0));
+  // A cardioid 5 cm from the guitar against an omni there: the proximity effect lifts the bass.
+  set(kMicPattern, ctx(kSourceGuitar, {{kGuitarModel, 2}, {kMicDistance, 0.05}}, 45), 0, 1, MoreBass());
+  // A second take on a second guitar, panned apart from the first: the part widens.
+  set(kDoubleTrack, ctx(kSourceGuitar, {{kGuitarModel, 2}}), 0, 1, Wider());
+  // The amplifier's hiss at -50 dBFS against none, under a clean single-coil note: the top band fills.
+  set(kNoiseFloor, ctx(kSourceGuitar, {{kGuitarModel, 2}}), -120, -50, MoreNoise());
+  // the wah, on a bright saw: in, its band-pass shapes the tone; heel to toe, the peak climbs
+  // from about 450 Hz to 2.2 kHz; in Auto a hard note pushes the treadle up from the heel.
+  set(kWah, ctx(kSourceSynth, kOpenSynth), 0, 1, Differs());
+  // A stereo pair 2 m back in a studio against one microphone there: the room folds to mono.
+  set(kMicSetup, ctx(kSourceOrgan, {{kRoomSize, 3}, {kMicDistance, 2.0}}), 0, 1, Narrower());
+  { std::vector<Setting> w = kOpenSynth; w.push_back({kWah, 1});
+    set(kWahPedal, ctx(kSourceSynth, w), 0, 1, Brighter(1.5));
+    w.push_back({kWahPedal, 0});
+    set(kWahAuto, ctx(kSourceSynth, w), 0, 1, Brighter(1.2)); }
   return t;
 }
 

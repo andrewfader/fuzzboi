@@ -41,12 +41,15 @@
 #include <complex>
 #include <vector>
 
+#include "air.hpp"
 #include "core.hpp"
 #include "filters.hpp"
 
 namespace fuzzboi::dsp::guitar {
 
-constexpr int kStrings = 6;
+constexpr int kStrings = 6;  // the courses the fretting hand plays
+// A twelve-string's courses are pairs: each course's second string sits after the six main ones.
+constexpr int kMaxStrings = 2 * kStrings;
 constexpr double kInch = 0.0254;
 constexpr double kPoundPerInch = 0.45359237 / 0.0254;  // lb/in to kg/m
 constexpr double kAirDensity = 1.2;       // kg/m^3 at 20 C
@@ -121,6 +124,18 @@ struct GuitarSpec {
   // Semitones the instrument's open strings sit from the tuning table's guitar notes: -12 for a
   // six-string bass, which takes every guitar tuning an octave down.
   int transpose = 0;
+  // A twelve-string: each course is a pair, its second string (`course`, low E course first) an
+  // octave or a unison above the main one. Players tune the pairs by ear, so each second string
+  // sits a few cents off true (`course_cents`), which is the slow chorus a twelve-string has. The
+  // pick meets the two strings of a course one after the other, `course_gap_s` apart at a
+  // moderate stroke: on most twelve-strings the octave string lies on the bass side and is struck
+  // first on a downstroke; Rickenbacker reversed the pairs so the main string speaks first.
+  bool twelve = false;
+  std::array<StringSpec, kStrings> course{};
+  std::array<int, kStrings> course_interval{};
+  std::array<double, kStrings> course_cents{};
+  bool octave_first = true;
+  double course_gap_s = 0.0;
 };
 
 // Open-string notes, low string first, as MIDI numbers.
@@ -138,8 +153,12 @@ inline constexpr std::array<Tuning, kTuningCount> kTunings{{
     {"Open C", {36, 43, 48, 55, 60, 64}},
 }};
 
-constexpr int kModelCount = 5;
-enum Model : int { kDreadnought, kClassical, kSingleCoil, kHumbucker, kBassVI };
+constexpr int kModelCount = 14;
+enum Model : int {
+  kDreadnought, kClassical, kSingleCoil, kHumbucker, kBassVI,
+  kElectric12, kAcoustic12, kArchtop, kAuditorium, kPlateSingleCoil, kOffset, kFibreglass,
+  kSemiHollow, kThinlineP90
+};
 
 // The string sets, low E first: part number, gauge, unit weight (D'Addario's chart), core ratio
 // (Zollner's ranges for wound strings), core, eta_f, eta_b, air, measured EI, wound.
@@ -192,6 +211,75 @@ inline constexpr std::array<StringSpec, kStrings> kNickelBassVI{{
     {"NW044", 0.044, 0.00035182, 0.38, Core::Steel, 2.0e-4, 3e-4, 0.0, 0.0, true},
     {"NW034", 0.034, 0.00021590, 0.42, Core::Steel, 2.0e-4, 3e-4, 0.0, 0.0, true},
     {"NW024", 0.024, 0.00010857, 0.50, Core::Steel, 2.0e-4, 3e-4, 0.0, 0.0, true},
+}};
+
+// Unit weights the chart does not list are its neighbour's scaled by the gauge squared (mass per
+// length goes as the cross-section): marked "scaled" below. Within a winding type this matches
+// the chart's own listed gauges to a few percent.
+inline constexpr double scaled(double chart_weight, double chart_gauge, double gauge) {
+  return chart_weight * (gauge / chart_gauge) * (gauge / chart_gauge);
+}
+
+// Nickel-wound 12-string regular lights 10-46 (EXL150), the set a Rickenbacker 360/12 leaves
+// the factory close to. Main strings low E course first: NW046, NW036, NW026, NW021 (scaled),
+// PL013, PL010; second strings: NW026 an octave over the low E, PL018, PL012, PL008 over A, D
+// and G, and PL013, PL010 in unison with the B and E.
+inline constexpr std::array<StringSpec, kStrings> kNickel12Main{{
+    {"NW046", 0.046, 0.00038216, 0.38, Core::Steel, 2.0e-4, 3e-4, 0.0, 0.0, true},
+    {"NW036", 0.036, 0.00023964, 0.42, Core::Steel, 2.0e-4, 3e-4, 0.0, 0.0, true},
+    {"NW026", 0.026, 0.00012671, 0.50, Core::Steel, 2.0e-4, 3e-4, 0.0, 0.0, true},
+    {"NW021", 0.021, scaled(0.00012671, 0.026, 0.021), 0.52, Core::Steel, 2.0e-4, 3e-4, 0.0, 0.0, true},
+    {"PL013", 0.013, 0.00003744, 1.00, Core::Steel, 7.0e-5, 3e-4, 0.0, 0.0, false},
+    {"PL010", 0.010, 0.00002215, 1.00, Core::Steel, 7.0e-5, 3e-4, 0.0, 0.0, false},
+}};
+inline constexpr std::array<StringSpec, kStrings> kNickel12Course{{
+    {"NW026", 0.026, 0.00012671, 0.50, Core::Steel, 2.0e-4, 3e-4, 0.0, 0.0, true},
+    {"PL018", 0.018, 0.00007199, 1.00, Core::Steel, 7.0e-5, 3e-4, 0.0, 0.0, false},
+    {"PL012", 0.012, 0.00003190, 1.00, Core::Steel, 7.0e-5, 3e-4, 0.0, 0.0, false},
+    {"PL008", 0.008, 0.00001418, 1.00, Core::Steel, 7.0e-5, 3e-4, 0.0, 0.0, false},
+    {"PL013", 0.013, 0.00003744, 1.00, Core::Steel, 7.0e-5, 3e-4, 0.0, 0.0, false},
+    {"PL010", 0.010, 0.00002215, 1.00, Core::Steel, 7.0e-5, 3e-4, 0.0, 0.0, false},
+}};
+// Phosphor-bronze 12-string lights 10-47 (EJ38): mains PB047, PB039, PB030, PB023 (all scaled
+// from the EJ16 chart's neighbours), PL014, PL010; seconds PB027 (scaled), PL018, PL012, PL008,
+// PL014, PL010.
+inline constexpr std::array<StringSpec, kStrings> kBronze12Main{{
+    {"PB047", 0.047, scaled(0.00036722, 0.042, 0.047), 0.40, Core::Steel, 3.0e-4, 3e-4, 0.0, 0.0, true},
+    {"PB039", 0.039, scaled(0.00036722, 0.042, 0.039), 0.44, Core::Steel, 3.0e-4, 3e-4, 0.0, 0.0, true},
+    {"PB030", 0.030, scaled(0.00021018, 0.032, 0.030), 0.50, Core::Steel, 3.0e-4, 3e-4, 0.0, 0.0, true},
+    {"PB023", 0.023, scaled(0.00011682, 0.024, 0.023), 0.52, Core::Steel, 3.0e-4, 3e-4, 0.0, 0.0, true},
+    {"PL014", 0.014, 0.00004401, 1.00, Core::Steel, 7.0e-5, 3e-4, 0.0, 0.0, false},
+    {"PL010", 0.010, 0.00002215, 1.00, Core::Steel, 7.0e-5, 3e-4, 0.0, 0.0, false},
+}};
+inline constexpr std::array<StringSpec, kStrings> kBronze12Course{{
+    {"PB027", 0.027, scaled(0.00011682, 0.024, 0.027), 0.50, Core::Steel, 3.0e-4, 3e-4, 0.0, 0.0, true},
+    {"PL018", 0.018, 0.00007199, 1.00, Core::Steel, 7.0e-5, 3e-4, 0.0, 0.0, false},
+    {"PL012", 0.012, 0.00003190, 1.00, Core::Steel, 7.0e-5, 3e-4, 0.0, 0.0, false},
+    {"PL008", 0.008, 0.00001418, 1.00, Core::Steel, 7.0e-5, 3e-4, 0.0, 0.0, false},
+    {"PL014", 0.014, 0.00004401, 1.00, Core::Steel, 7.0e-5, 3e-4, 0.0, 0.0, false},
+    {"PL010", 0.010, 0.00002215, 1.00, Core::Steel, 7.0e-5, 3e-4, 0.0, 0.0, false},
+}};
+// Chromes flatwound jazz lights 11-50 (ECG24): a flat ribbon over a round core. The chart lists
+// no flatwound weights, so the wound strings are roundwound nickel scaled to gauge plus 8% (a
+// ribbon packs more metal than round wire of the same outer diameter); the ribbon's turns rub
+// along their whole width, so friction between the wraps is about three times a roundwound's,
+// which is what makes flatwounds thud and die early in the upper partials.
+inline constexpr std::array<StringSpec, kStrings> kFlatwoundJazz{{
+    {"ECG050", 0.050, 1.08 * scaled(0.00038216, 0.046, 0.050), 0.45, Core::Steel, 6.0e-4, 6e-4, 0.0, 0.0, true},
+    {"ECG040", 0.040, 1.08 * scaled(0.00038216, 0.046, 0.040), 0.47, Core::Steel, 6.0e-4, 6e-4, 0.0, 0.0, true},
+    {"ECG030", 0.030, 1.08 * scaled(0.00023964, 0.036, 0.030), 0.50, Core::Steel, 6.0e-4, 6e-4, 0.0, 0.0, true},
+    {"ECG022", 0.022, 1.08 * scaled(0.00012671, 0.026, 0.022), 0.55, Core::Steel, 6.0e-4, 6e-4, 0.0, 0.0, true},
+    {"PL015", 0.015, 0.00004984, 1.00, Core::Steel, 7.0e-5, 3e-4, 0.0, 0.0, false},
+    {"PL011", 0.011, 0.00002680, 1.00, Core::Steel, 7.0e-5, 3e-4, 0.0, 0.0, false},
+}};
+// Nickel-wound medium 11-49 (EXL115), what heavier-handed players put on a short-scale offset.
+inline constexpr std::array<StringSpec, kStrings> kNickelMedium{{
+    {"NW049", 0.049, scaled(0.00038216, 0.046, 0.049), 0.38, Core::Steel, 2.0e-4, 3e-4, 0.0, 0.0, true},
+    {"NW039", 0.039, scaled(0.00023964, 0.036, 0.039), 0.42, Core::Steel, 2.0e-4, 3e-4, 0.0, 0.0, true},
+    {"NW028", 0.028, scaled(0.00012671, 0.026, 0.028), 0.50, Core::Steel, 2.0e-4, 3e-4, 0.0, 0.0, true},
+    {"PL018", 0.018, 0.00007199, 1.00, Core::Steel, 7.0e-5, 3e-4, 0.0, 0.0, false},
+    {"PL014", 0.014, 0.00004401, 1.00, Core::Steel, 7.0e-5, 3e-4, 0.0, 0.0, false},
+    {"PL011", 0.011, 0.00002680, 1.00, Core::Steel, 7.0e-5, 3e-4, 0.0, 0.0, false},
 }};
 
 inline const GuitarSpec& spec(int model) {
@@ -261,6 +349,115 @@ inline const GuitarSpec& spec(int model) {
         0.0, 0.0, 1.0, 1.0, 0.0,
         {{{0.179, 0.0, 0.012, 2900.0, 1.6}, {0.116, 0.0, 0.012, 2900.0, 1.6}, {0.048, 0.0, 0.012, 3000.0, 1.6}}},
         0.15, 0.001, -12};
+    // An electric twelve-string (Rickenbacker 360/12 pattern): 24.75" scale, 24 low frets, a
+    // semi-hollow body under a trapeze tailpiece, EXL150 strings, the pairs reversed so the main
+    // string speaks first. The "toaster" single coils are wound to about half a Stratocaster's
+    // inductance, so under the same load they resonate near 5 kHz: the chime.
+    g[kElectric12] = {
+        "Electric 12-string", Kind::Electric, 24.75 * kInch, 24, kNickel12Main,
+        1.6e-3, 1.4e-3, 0.40e-3, 0.28e-3, 0.9e-3,
+        0.00080, 0.35, 0.3,
+        {},
+        0.0, 0.0, 1.0, 1.0, 0.0,
+        {{{0.150, 0.0, 0.009, 5000.0, 1.2}, {0.0, 0.0, 0.0, 5000.0, 1.2}, {0.046, 0.0, 0.009, 5200.0, 1.2}}},
+        0.10, 0.001, 0,
+        true, kNickel12Course, {12, 12, 12, 12, 0, 0}, {3.0, -2.0, 4.0, 3.0, -1.5, 2.0}, false, 0.0025};
+    // An acoustic twelve-string (Martin D12-28 pattern): the dreadnought's body braced heavier
+    // for twelve strings' pull (about 1.8 times a six-string's), so its modes sit about 5% above
+    // the D-28's and its bridge takes energy a little less readily; EJ38 strings, a high 12-string
+    // action over a nut cut low (as setups for twelves are, or the first frets play sharp), the
+    // octave strings struck first.
+    g[kAcoustic12] = {
+        "Acoustic 12-string", Kind::Acoustic, 25.4 * kInch, 20, kBronze12Main,
+        2.4e-3, 1.8e-3, 0.40e-3, 0.30e-3, 1.2e-3,
+        0.0050, 0.20, 1.0,
+        {{{107.0, 20.0, 1.00}, {203.0, 30.0, 0.80}, {214.0, 35.0, 0.60}, {270.0, 30.0, 0.30}, {342.0, 30.0, 0.35},
+          {395.0, 35.0, 0.50}, {458.0, 35.0, 0.45}, {534.0, 35.0, 0.30}, {675.0, 40.0, 0.30}, {770.0, 40.0, 0.25}}},
+        800.0, 9000.0, 45.0, 32.0, 0.22,
+        {},
+        0.25, 0.003, 0,
+        true, kBronze12Course, {12, 12, 12, 12, 0, 0}, {4.0, -3.0, 3.0, 5.0, -2.0, 2.0}, true, 0.0030};
+    // A jazz archtop (Gibson ES-175 pattern): 24.75" scale, 20 frets, a laminated hollow body with
+    // a floating bridge (which drains the strings faster than a solid body), Chromes flatwounds over
+    // a nut cut low for their stiff wound strings, and two humbuckers 162 and 50 mm from the saddle.
+    g[kArchtop] = {
+        "Jazz archtop", Kind::Electric, 24.75 * kInch, 20, kFlatwoundJazz,
+        2.0e-3, 1.7e-3, 0.36e-3, 0.28e-3, 1.0e-3,
+        0.0012, 0.30, 0.5,
+        {},
+        0.0, 0.0, 1.0, 1.0, 0.0,
+        {{{0.162, 0.0185, 0.010, 2100.0, 1.4}, {0.0, 0.0, 0.0, 2100.0, 1.4}, {0.050, 0.0185, 0.010, 2300.0, 1.4}}},
+        0.15, 0.002};
+    // A grand auditorium cutaway (Taylor 914ce pattern): 25.5" scale, EJ16 lights, a low Taylor
+    // action. Its lower bout is about a tenth narrower than a dreadnought's, so the D-28's modes
+    // are scaled up by the inverse of the size (an estimate: no measured set was found).
+    g[kAuditorium] = {
+        "Grand auditorium", Kind::Acoustic, 25.5 * kInch, 20, kPhosphorBronzeLights,
+        2.0e-3, 1.6e-3, 0.42e-3, 0.28e-3, 1.1e-3,
+        0.0055, 0.20, 1.0,
+        {{{110.0, 24.0, 1.00}, {205.0, 30.0, 0.80}, {218.0, 35.0, 0.60}, {270.0, 30.0, 0.30}, {345.0, 30.0, 0.35},
+          {395.0, 35.0, 0.50}, {455.0, 35.0, 0.45}, {530.0, 35.0, 0.30}, {670.0, 40.0, 0.30}, {760.0, 40.0, 0.25}}},
+        820.0, 9000.0, 48.0, 32.0, 0.22,
+        {},
+        0.4, 0.003};
+    // A plate-bridge single coil (Fender Telecaster pattern): 25.5" scale, 21 frets, strings
+    // through the body, the bridge pickup slanted in a steel plate 40 mm from the saddle (the
+    // plate's eddy currents and the coil's higher wind give a sharper peak near 3.8 kHz), a chromed
+    // neck pickup 155 mm up whose cover lowers and softens its peak.
+    g[kPlateSingleCoil] = {
+        "Plate single-coil", Kind::Electric, 25.5 * kInch, 21, kNickelRegularLights,
+        2.0e-3, 1.6e-3, 0.45e-3, 0.30e-3, 0.9e-3,
+        0.00055, 0.35, 0.3,
+        {},
+        0.0, 0.0, 1.0, 1.0, 0.0,
+        {{{0.155, 0.0, 0.010, 2700.0, 1.1}, {0.0, 0.0, 0.0, 2700.0, 1.1}, {0.040, 0.0, 0.010, 3800.0, 2.0}}},
+        0.15, 0.001};
+    // A short-scale offset (Fender Mustang pattern): 24" scale, 22 frets, EXL115 mediums, a
+    // floating vibrato bridge that saps sustain, two low-wound single coils 140 and 55 mm from the
+    // saddle resonating near 4.2 kHz.
+    g[kOffset] = {
+        "Offset short scale", Kind::Electric, 24.0 * kInch, 22, kNickelMedium,
+        1.8e-3, 1.5e-3, 0.45e-3, 0.30e-3, 1.0e-3,
+        0.0010, 0.35, 0.3,
+        {},
+        0.0, 0.0, 1.0, 1.0, 0.0,
+        {{{0.140, 0.0, 0.010, 4200.0, 1.4}, {0.0, 0.0, 0.0, 4200.0, 1.4}, {0.055, 0.0, 0.010, 4400.0, 1.4}}},
+        0.15, 0.002};
+    // A fibreglass hollow body (Valco "Res-O-Glas" pattern, sold as the Airline): 24.75" scale,
+    // 20 frets, two moulded fibreglass shells, a high action, two small single coils 150 and 45 mm
+    // from the saddle resonating near 5 kHz: bright, thin and raw.
+    g[kFibreglass] = {
+        "Fibreglass hollow", Kind::Electric, 24.75 * kInch, 20, kNickelRegularLights,
+        2.4e-3, 2.0e-3, 0.50e-3, 0.35e-3, 0.9e-3,
+        0.0010, 0.35, 0.3,
+        {},
+        0.0, 0.0, 1.0, 1.0, 0.0,
+        {{{0.150, 0.0, 0.012, 5000.0, 1.5}, {0.0, 0.0, 0.0, 5000.0, 1.5}, {0.045, 0.0, 0.012, 5200.0, 1.6}}},
+        0.15, 0.002};
+    // A semi-hollow (Gibson ES-335 pattern): 24.75" scale, 22 frets, EXL110, a thinline body with a
+    // maple block under the bridge, so it rings almost as long as a solid body, and two humbuckers
+    // where a Les Paul has them.
+    g[kSemiHollow] = {
+        "Semi-hollow", Kind::Electric, 24.75 * kInch, 22, kNickelRegularLights,
+        2.0e-3, 1.6e-3, 0.45e-3, 0.30e-3, 1.1e-3,
+        0.00052, 0.35, 0.3,
+        {},
+        0.0, 0.0, 1.0, 1.0, 0.0,
+        {{{0.147, 0.0185, 0.010, 2250.0, 1.5}, {0.0, 0.0, 0.0, 2250.0, 1.5}, {0.045, 0.0185, 0.010, 2350.0, 1.5}}},
+        0.15, 0.001};
+    // A fully hollow thinline with P-90s (Epiphone Casino pattern): 24.75" scale, 20 frets, EXL110,
+    // a floating bridge on a trapeze tailpiece that drains the strings faster, and two P-90s 155 and
+    // 48 mm from the saddle: single coils with a wide window (two rows of adjustable poles over bar
+    // magnets) and about three times a Stratocaster coil's turns, so they resonate lower and
+    // broader, near 2.8 kHz.
+    g[kThinlineP90] = {
+        "Thinline P-90", Kind::Electric, 24.75 * kInch, 20, kNickelRegularLights,
+        2.0e-3, 1.7e-3, 0.45e-3, 0.30e-3, 1.0e-3,
+        0.0014, 0.30, 0.4,
+        {},
+        0.0, 0.0, 1.0, 1.0, 0.0,
+        {{{0.155, 0.0, 0.018, 2700.0, 1.3}, {0.0, 0.0, 0.0, 2700.0, 1.3}, {0.048, 0.0, 0.018, 2900.0, 1.3}}},
+        0.15, 0.002};
     return g;
   }();
   return specs[static_cast<size_t>(std::clamp(model, 0, kModelCount - 1))];
@@ -318,10 +515,13 @@ inline double fretted_hz(const StringPhysics& p, const GuitarSpec& g, int fret, 
   return std::sqrt(tension / p.mu) / (2.0 * (speaking - bend));
 }
 
+// `string` counts the main strings 0 to 5 and a twelve-string's second strings 6 to 11; a second
+// string sits in its course's slot on the bridge and nut, so it shares that position's action.
 inline StringPhysics string_physics(const GuitarSpec& g, int string, double open_hz) {
   StringPhysics p;
-  const size_t s = static_cast<size_t>(std::clamp(string, 0, kStrings - 1));
-  p.spec = g.strings[s];
+  const int index = std::clamp(string, 0, kMaxStrings - 1);
+  const size_t s = static_cast<size_t>(index % kStrings);
+  p.spec = index >= kStrings ? g.course[s] : g.strings[s];
   p.open_hz = open_hz;
   p.mu = p.spec.unit_weight * kPoundPerInch;
   p.diameter = p.spec.gauge_in * kInch;
@@ -802,7 +1002,26 @@ struct Setup {
   double age = 0.0;         // 0 new strings, 1 dead ones
   int position = 0;         // the fretting hand's position (fret)
   double slip_scale = 1.0;  // scales the release time (calibration against recordings only)
+  // The room the guitar is in. It was tuned at 20 C; the strings and the neck expand differently
+  // as the room warms or cools, and the top takes up or gives off water with the humidity.
+  double humidity = 0.45;   // relative, 0..1
+  double celsius = 20.0;
 };
+
+// Linear thermal expansion, per kelvin: carbon steel; nylon 6 (a string's polymer, near room
+// temperature); maple and mahogany along the grain, which is what sets the neck's length (Wood
+// Handbook ch. 4: 3 to 4.5e-6 parallel to the grain).
+constexpr double kSteelExpansion = 11.7e-6, kNylonExpansion = 8.0e-5, kNeckExpansion = 3.8e-6;
+
+// A string tuned at 20 C in a room at `celsius`: held between nut and saddle on a neck that grows
+// less than the string would, so it slackens as it warms (and tightens as it cools) by
+// E A (alpha_string - alpha_neck) dT. A steel string goes about a cent flat per degree, a nylon
+// one several times that.
+inline void warm(StringPhysics& p, double celsius) {
+  const double expansion = p.spec.core == Core::Nylon ? kNylonExpansion : kSteelExpansion;
+  p.tension = std::max(0.2 * p.tension, p.tension - p.ea * (expansion - kNeckExpansion) * (celsius - 20.0));
+  p.impedance = std::sqrt(p.tension * p.mu);
+}
 
 // --- the guitar ------------------------------------------------------------------------------------
 
@@ -829,15 +1048,16 @@ class Guitar {
   }
 
   void reset() {
-    for (int i = 0; i < kStrings; ++i) {
+    for (int i = 0; i < kMaxStrings; ++i) {
       String& s = strings_[static_cast<size_t>(i)];
       s.v.clear(); s.h.clear();
       s.held = false; s.damping = false; s.free = false; s.env = 0.0f; s.excite_left = 0;
       s.ratio = 1.0; s.tension_ratio = s.tension_target = 1.0; s.elongation = 0.0; s.push = 0.0f;
       s.prev_v = s.prev_h = 0.0f; s.pickup_prev.fill(0.0f);
       s.fret = setup_.capo;
-      tune(i, setup_.capo, true);
+      if (i < count()) tune(i, setup_.capo, true);
     }
+    pending_.fill({});
     for (auto& m : body_) m.reset();
     acceleration_.reset(); radiation_.reset();
     pickup_filter_.reset();
@@ -855,26 +1075,40 @@ class Guitar {
     s.tuning = std::clamp(s.tuning, 0, kTuningCount - 1);
     s.capo = std::clamp(s.capo, 0, 12);
     s.pickup = std::clamp(s.pickup, 0, kPickupChoices - 1);
-    const bool restring = !configured_ || s.model != setup_.model || s.tuning != setup_.tuning || s.capo != setup_.capo;
-    const bool rebody = !configured_ || s.model != setup_.model || s.pickup != setup_.pickup;
+    s.humidity = std::clamp(s.humidity, 0.0, 1.0);
+    s.celsius = std::clamp(s.celsius, -20.0, 50.0);
+    const bool restring = !configured_ || s.model != setup_.model || s.tuning != setup_.tuning || s.capo != setup_.capo ||
+                          s.celsius != setup_.celsius;
+    const bool rebody = !configured_ || s.model != setup_.model || s.pickup != setup_.pickup ||
+                        s.humidity != setup_.humidity || s.celsius != setup_.celsius;
     const bool reloss = s.mute != setup_.mute || s.age != setup_.age;
     setup_ = s;
     const GuitarSpec& g = guitar();
     if (restring)
       for (auto& string : dispersion_) for (auto& d : string) d.valid = false;
-    if (restring)
-      for (int i = 0; i < kStrings; ++i) {
-        physics_[static_cast<size_t>(i)] = string_physics(g, i, midi_to_hz(open_note(i)));
+    if (restring) {
+      for (int i = 0; i < count(); ++i) {
+        physics_[static_cast<size_t>(i)] = string_physics(g, i, open_hz(i));
+        warm(physics_[static_cast<size_t>(i)], setup_.celsius);
         String& st = strings_[static_cast<size_t>(i)];
         if (!st.held && st.env < kQuiet) { st.fret = setup_.capo; tune(i, setup_.capo, true); }
       }
+      // A six-string has no second strings: whatever a twelve-string left ringing on them stops.
+      for (int i = count(); i < kMaxStrings; ++i) {
+        String& st = strings_[static_cast<size_t>(i)];
+        st.v.clear(); st.h.clear();
+        st.held = st.damping = st.free = false;
+        st.env = 0.0f; st.push = 0.0f; st.excite_left = 0;
+      }
+      pending_.fill({});
+    }
     if (rebody) {
       build_output(g);
       exchange_cos_ = static_cast<float>(std::cos(g.plane_exchange));
       exchange_sin_ = static_cast<float>(std::sin(g.plane_exchange));
     }
     if (rebody || (reloss && !restring))
-      for (int i = 0; i < kStrings; ++i) {
+      for (int i = 0; i < count(); ++i) {
         design_reflection(i);
         strings_[static_cast<size_t>(i)].tuned_ratio = -1.0;
       }
@@ -883,9 +1117,21 @@ class Guitar {
 
   const Setup& setup() const { return setup_; }
   const GuitarSpec& guitar() const { return spec(setup_.model); }
-  const StringPhysics& physics(int string) const { return physics_[static_cast<size_t>(std::clamp(string, 0, kStrings - 1))]; }
+  // How many strings the instrument has: six, or twelve in six courses.
+  int count() const { return guitar().twelve ? kMaxStrings : kStrings; }
+  // Strings 0 to 5 are the courses' main strings; on a twelve-string, 6 to 11 are their second
+  // strings.
+  const StringPhysics& physics(int string) const { return physics_[static_cast<size_t>(std::clamp(string, 0, kMaxStrings - 1))]; }
   int open_note(int string) const {
     return kTunings[static_cast<size_t>(setup_.tuning)].notes[static_cast<size_t>(std::clamp(string, 0, kStrings - 1))] + guitar().transpose;
+  }
+  // What a string is tuned to: a second string is its course's note plus the course interval,
+  // left a few cents off by the player's ear.
+  double open_hz(int string) const {
+    const GuitarSpec& g = guitar();
+    if (string < kStrings) return midi_to_hz(open_note(string));
+    const size_t c = static_cast<size_t>(std::clamp(string - kStrings, 0, kStrings - 1));
+    return midi_to_hz(open_note(static_cast<int>(c)) + g.course_interval[c]) * cents_ratio(g.course_cents[c]);
   }
 
   // Where a guitarist would play `note`: on a string where it lies between the capo and the top
@@ -919,10 +1165,34 @@ class Guitar {
     return best;
   }
 
-  // Plucks `string` stopped at `fret`. `velocity` 0..1 sets how far the string is pulled (and,
-  // through that, how fast it slips off); `seed` varies the pluck, since no two are alike.
+  // Plucks the course `string` stopped at `fret`. `velocity` 0..1 sets how far the string is
+  // pulled (and, through that, how fast it slips off); `seed` varies the pluck, since no two are
+  // alike. On a twelve-string the pick goes through both strings of the course: the one it meets
+  // first now, the other a couple of milliseconds later (sooner on a hard, fast stroke). The
+  // thinner octave string is pushed as far but carries less, and the pick has spent a little on
+  // the first string, so the second string sounds a little softer.
   void pluck(int string, int fret, double velocity, uint32_t seed) {
     if (string < 0 || string >= kStrings) return;
+    const GuitarSpec& g = guitar();
+    if (!g.twelve) { pluck_string(string, fret, velocity, seed); return; }
+    const int second = string + kStrings;
+    const int first_hit = g.octave_first ? second : string, second_hit = g.octave_first ? string : second;
+    pluck_string(first_hit, fret, velocity, seed);
+    Pending& p = pending_[static_cast<size_t>(string)];
+    const double gap = g.course_gap_s * (1.3 - 0.6 * std::clamp(velocity, 0.0, 1.0));
+    p.string = second_hit;
+    p.fret = fret;
+    p.velocity = 0.85 * velocity;
+    p.seed = seed ^ 0x9e3779b9u;
+    p.samples = std::max(1, static_cast<int>(gap * rate_));
+    // Both strings of the course are under the fingers from the moment the stroke starts.
+    String& later = strings_[static_cast<size_t>(second_hit)];
+    later.held = true; later.damping = false; later.free = false;
+  }
+
+  // Plucks one string (0 to 5 a course's main string, 6 to 11 a twelve-string's second string).
+  void pluck_string(int string, int fret, double velocity, uint32_t seed) {
+    if (string < 0 || string >= count()) return;
     String& st = strings_[static_cast<size_t>(string)];
     rng_.seed(seed ^ 0x6a09e667u);
     st.held = true;
@@ -985,61 +1255,70 @@ class Guitar {
 
   // A legato note on a ringing string: the fingertip lands on (hammer-on) or leaves for
   // (pull-off) another fret without a new pluck, or slides there (`slide`; the voice then glides
-  // the pitch by the ratio it supplies).
+  // the pitch by the ratio it supplies). On a twelve-string one fingertip stops both strings of
+  // the course.
   void legato(int string, int fret, double velocity, bool slide) {
     if (string < 0 || string >= kStrings) return;
-    String& st = strings_[static_cast<size_t>(string)];
-    const int old = st.fret;
-    st.held = true; st.damping = false; st.free = false;
-    st.fret = std::clamp(fret, setup_.capo, guitar().frets);
-    tune(string, st.fret, false);
-    if (!slide) {
-      // The fingertip striking the fret, or flicking the string sideways as it leaves.
-      const double kick = (st.fret > old ? 0.3 : 0.5) * (0.25 + 2.75 * velocity) * 1e-3;
-      const double by_fret = std::min(4.0, st.period * 0.05);
-      st.v.upper().add(by_fret, static_cast<float>(kick * 0.5));
-      st.h.upper().add(by_fret, static_cast<float>(kick * 0.85));
-    }
-    st.env = std::max(st.env, 1e-4f);
-    awake_ = true;
+    legato_string(string, fret, velocity, slide);
+    if (!guitar().twelve) return;
+    legato_string(string + kStrings, fret, velocity, slide);
+    Pending& p = pending_[static_cast<size_t>(string)];
+    if (p.samples > 0) p.fret = fret;
   }
 
-  // The key is up: the fretting hand lifts and damps the string so it falls 60 dB in
-  // `release_s`, or sooner if the string would die sooner on its own.
+  // The key is up: the fretting hand lifts and damps the course so it falls 60 dB in
+  // `release_s`, or sooner if the string would die sooner on its own. A second string the pick
+  // has not reached yet is not struck at all.
   void release(int string, double release_s) {
     if (string < 0 || string >= kStrings) return;
-    String& st = strings_[static_cast<size_t>(string)];
-    st.held = false;
-    st.free = false;
-    st.damping = true;
-    st.damp_s = std::max(0.005, release_s);
-    apply_damping(st);
+    pending_[static_cast<size_t>(string)].samples = 0;
+    damp_string(string, release_s);
+    if (guitar().twelve) damp_string(string + kStrings, release_s);
     // The last note let go and nothing left to ring: the hands come to rest on the strings, and
     // the ones that were only ringing in sympathy are muted too, a little more gently.
-    for (const auto& other : strings_) if (other.held || other.free) return;
-    for (auto& other : strings_)
-      if (!other.damping && other.env > kQuiet) { other.damping = true; other.damp_s = 2.0 * st.damp_s; apply_damping(other); }
+    for (int i = 0; i < count(); ++i) if (strings_[static_cast<size_t>(i)].held || strings_[static_cast<size_t>(i)].free) return;
+    const double damp_s = std::max(0.005, release_s);
+    for (int i = 0; i < count(); ++i) {
+      String& other = strings_[static_cast<size_t>(i)];
+      if (!other.damping && other.env > kQuiet) { other.damping = true; other.damp_s = 2.0 * damp_s; apply_damping(other); }
+    }
   }
   // Lets go without damping (the sustain pedal is down: let it ring).
   void let_ring(int string) {
     if (string < 0 || string >= kStrings) return;
-    strings_[static_cast<size_t>(string)].held = false;
-    strings_[static_cast<size_t>(string)].free = true;
+    for (int i : {string, string + kStrings}) {
+      if (i >= count()) break;
+      strings_[static_cast<size_t>(i)].held = false;
+      strings_[static_cast<size_t>(i)].free = true;
+    }
   }
   bool held(int string) const { return string >= 0 && string < kStrings && strings_[static_cast<size_t>(string)].held; }
   int fret(int string) const { return strings_[static_cast<size_t>(std::clamp(string, 0, kStrings - 1))].fret; }
 
   // The pitch the voice wants as a multiple of the fretted pitch: bends, vibrato, fine tuning and
-  // slides all arrive this way, and the loop follows.
+  // slides all arrive this way, and the loop follows (both strings of a course, which bend
+  // together under one finger).
   void set_ratio(int string, double ratio) {
-    if (string >= 0 && string < kStrings) strings_[static_cast<size_t>(string)].ratio = std::clamp(ratio, 0.25, 4.0);
+    if (string < 0 || string >= kStrings) return;
+    strings_[static_cast<size_t>(string)].ratio = std::clamp(ratio, 0.25, 4.0);
+    if (guitar().twelve) strings_[static_cast<size_t>(string + kStrings)].ratio = std::clamp(ratio, 0.25, 4.0);
   }
 
   bool awake() const { return awake_; }
+  // How strongly the selected pickups pick up the mains field around them, against a single
+  // coil's: a single coil 1; a humbucker's two reverse-wound, reverse-magnet coils cancel it to
+  // about -24 dB; two pickups together average; an acoustic has no coil, 0.
+  double hum_sensitivity() const {
+    const GuitarSpec& g = guitar();
+    if (g.kind != Kind::Electric) return 0.0;
+    const auto one = [](const Pickup& pk) { return pk.aperture_m <= 0.0 ? 0.0 : pk.coil_spacing_m > 0.0 ? 0.063 : 1.0; };
+    if (both_pickups(g)) return 0.5 * (one(g.pickups[kNeckPickup]) + one(g.pickups[kBridgePickup]));
+    return one(g.pickups[static_cast<size_t>(setup_.pickup)]);
+  }
   // How long the longest-ringing open string takes to fall 60 dB, for the host's tail.
   double longest_decay_s() const {
     double t = 0.5;
-    for (int i = 0; i < kStrings; ++i) {
+    for (int i = 0; i < count(); ++i) {
       const StringPhysics& p = physics_[static_cast<size_t>(i)];
       const double r = decay_rate(p, guitar(), p.open_hz, p.open_hz, guitar().scale_m, guitar().horizontal_coupling, setup_.mute, setup_.age);
       t = std::max(t, 6.91 / std::max(r, 1e-3));
@@ -1059,12 +1338,12 @@ class Guitar {
   // The displacement along a string (metres, both planes summed), sampled from the bridge to the
   // nut at one point per sample of travel: what the tests read the plucked shape from.
   void string_shape(int string, std::vector<float>& out) const {
-    const String& st = strings_[static_cast<size_t>(std::clamp(string, 0, kStrings - 1))];
+    const String& st = strings_[static_cast<size_t>(std::clamp(string, 0, kMaxStrings - 1))];
     out.clear();
     for (int i = 0; i <= static_cast<int>(st.period * 0.5); ++i) out.push_back(displacement(st.v, st, i) + displacement(st.h, st, i));
   }
   // The pitch rise tension modulation is causing right now, as a ratio.
-  double tension_ratio(int string) const { return strings_[static_cast<size_t>(std::clamp(string, 0, kStrings - 1))].tension_ratio; }
+  double tension_ratio(int string) const { return strings_[static_cast<size_t>(std::clamp(string, 0, kMaxStrings - 1))].tension_ratio; }
 
   // One output sample: the radiated sound of an acoustic or the pickup voltage of an electric,
   // at a digital level.
@@ -1072,11 +1351,15 @@ class Guitar {
     if (!awake_) return 0.0f;
     const GuitarSpec& g = guitar();
     const bool electric = g.kind == Kind::Electric;
-    // Any string sounding keeps all six running: the quiet ones are listening at the bridge.
+    // The pick reaching a course's second string.
+    for (auto& p : pending_)
+      if (p.samples > 0 && --p.samples == 0) pluck_string(p.string, p.fret, p.velocity, p.seed);
+    // Any string sounding keeps them all running: the quiet ones are listening at the bridge.
+    const int strings = count();
     bool any = false;
-    for (const auto& s : strings_) any = any || s.held || s.env > kQuiet;
+    for (int i = 0; i < strings; ++i) any = any || strings_[static_cast<size_t>(i)].held || strings_[static_cast<size_t>(i)].env > kQuiet;
     if (!any) {
-      for (int i = 0; i < kStrings; ++i) quiet(i);
+      for (int i = 0; i < strings; ++i) quiet(i);
       awake_ = false;
       return 0.0f;
     }
@@ -1085,9 +1368,9 @@ class Guitar {
     // velocity, conductance times force, through a leaky integrator; one sample late, which keeps
     // the junction explicit and is negligible at these couplings.
     float total = 0.0f;
-    for (const auto& s : strings_) total += s.push;
+    for (int i = 0; i < strings; ++i) total += strings_[static_cast<size_t>(i)].push;
     float force_sum = 0.0f, pickup = 0.0f;
-    for (int i = 0; i < kStrings; ++i) {
+    for (int i = 0; i < strings; ++i) {
       String& st = strings_[static_cast<size_t>(i)];
       const StringPhysics& p = physics_[static_cast<size_t>(i)];
       // The tension glides sample by sample toward the last measurement: a stepped loop length
@@ -1154,6 +1437,35 @@ class Guitar {
 
  private:
   static constexpr float kQuiet = 2e-9f;  // metres: a couple of nanometres is silence
+
+  // A course's second string, waiting for the pick to reach it.
+  struct Pending { int samples = 0, string = 0, fret = 0; double velocity = 0.0; uint32_t seed = 0; };
+
+  void legato_string(int string, int fret, double velocity, bool slide) {
+    String& st = strings_[static_cast<size_t>(string)];
+    const int old = st.fret;
+    st.held = true; st.damping = false; st.free = false;
+    st.fret = std::clamp(fret, setup_.capo, guitar().frets);
+    tune(string, st.fret, false);
+    if (!slide) {
+      // The fingertip striking the fret, or flicking the string sideways as it leaves.
+      const double kick = (st.fret > old ? 0.3 : 0.5) * (0.25 + 2.75 * velocity) * 1e-3;
+      const double by_fret = std::min(4.0, st.period * 0.05);
+      st.v.upper().add(by_fret, static_cast<float>(kick * 0.5));
+      st.h.upper().add(by_fret, static_cast<float>(kick * 0.85));
+    }
+    st.env = std::max(st.env, 1e-4f);
+    awake_ = true;
+  }
+
+  void damp_string(int string, double release_s) {
+    String& st = strings_[static_cast<size_t>(string)];
+    st.held = false;
+    st.free = false;
+    st.damping = true;
+    st.damp_s = std::max(0.005, release_s);
+    apply_damping(st);
+  }
 
   struct String {
     Plane v, h;
@@ -1456,14 +1768,19 @@ class Guitar {
   void build_output(const GuitarSpec& g) {
     body_count_ = 0;
     if (g.kind == Kind::Acoustic) {
+      // The top at the moisture the room's air brings it to: its modes shift and broaden together,
+      // and a mode's peak response goes with its Q (the modal mass is the same), so a damper top
+      // answers each mode less.
+      const air::WoodBody wood = air::wood_body(setup_.humidity, setup_.celsius);
       for (const Mode& m : g.modes)
-        if (m.hz > 0.0 && body_count_ < kBodyModes) body_[static_cast<size_t>(body_count_++)].set(m.hz, m.q, m.gain, rate_);
+        if (m.hz > 0.0 && body_count_ < kBodyModes)
+          body_[static_cast<size_t>(body_count_++)].set(m.hz * wood.frequency_ratio, m.q * wood.q_ratio, m.gain * wood.q_ratio, rate_);
       Rng r(0xb0d1e5u + static_cast<uint32_t>(setup_.model));
       for (double f = g.dense_from_hz; f < g.dense_to_hz && body_count_ < kBodyModes; f += g.dense_spacing_hz * (0.6 + 0.8 * r.unipolar())) {
         // Levels scatter (no two modes alike) under a top that rolls off gently above 3 kHz.
         const double roll = 1.0 / std::sqrt(1.0 + std::pow(f / 3000.0, 2.0));
         const double level = g.dense_level * roll * (0.3 + 0.7 * r.unipolar()) * (r.unipolar() < 0.5 ? -1.0 : 1.0);
-        body_[static_cast<size_t>(body_count_++)].set(f, g.dense_q * (0.7 + 0.6 * r.unipolar()), level, rate_);
+        body_[static_cast<size_t>(body_count_++)].set(f * wood.frequency_ratio, g.dense_q * (0.7 + 0.6 * r.unipolar()) * wood.q_ratio, level * wood.q_ratio, rate_);
       }
       direct_ = 0.01;
       output_scale_ = 1.0;
@@ -1485,12 +1802,13 @@ class Guitar {
   static constexpr int kMaxFitPartials = 64;
   static constexpr int kMaxFrets = 24;
   struct Dispersion { double allpass = 0.0; int sections = 0; bool valid = false; };
-  std::array<std::array<Dispersion, kMaxFrets + 1>, kStrings> dispersion_{};
+  std::array<std::array<Dispersion, kMaxFrets + 1>, kMaxStrings> dispersion_{};
   double rate_ = 48000.0;
   Setup setup_{};
   bool configured_ = false, awake_ = false;
-  std::array<String, kStrings> strings_{};
-  std::array<StringPhysics, kStrings> physics_{};
+  std::array<String, kMaxStrings> strings_{};
+  std::array<StringPhysics, kMaxStrings> physics_{};
+  std::array<Pending, kStrings> pending_{};
   std::array<Resonator, kBodyModes> body_{};
   int body_count_ = 0;
   StateVariable pickup_filter_;
