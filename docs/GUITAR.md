@@ -121,7 +121,7 @@ pluck point in mm from the saddle, finger to plectrum, palm mute, string age, ha
 
 The instrument and the player sit on the editor's GUITAR page:
 
-![The GUITAR page: instrument, right hand, pickups and left hand](screenshots/page11.png)
+![The GUITAR page: instrument, right hand, pickups, left hand, the room and its air](screenshots/page11.png)
 
 ## What is simulated
 
