@@ -1779,7 +1779,11 @@ class Guitar {
       for (double f = g.dense_from_hz; f < g.dense_to_hz && body_count_ < kBodyModes; f += g.dense_spacing_hz * (0.6 + 0.8 * r.unipolar())) {
         // Levels scatter (no two modes alike) under a top that rolls off gently above 3 kHz.
         const double roll = 1.0 / std::sqrt(1.0 + std::pow(f / 3000.0, 2.0));
-        const double level = g.dense_level * roll * (0.3 + 0.7 * r.unipolar()) * (r.unipolar() < 0.5 ? -1.0 : 1.0);
+        // Two draws in two statements: within one expression the compiler picks their order, and
+        // MSVC picked the other one, so Windows built every acoustic a different body.
+        const double scatter = 0.3 + 0.7 * r.unipolar();
+        const double sign = r.unipolar() < 0.5 ? -1.0 : 1.0;
+        const double level = g.dense_level * roll * scatter * sign;
         body_[static_cast<size_t>(body_count_++)].set(f * wood.frequency_ratio, g.dense_q * (0.7 + 0.6 * r.unipolar()) * wood.q_ratio, level * wood.q_ratio, rate_);
       }
       direct_ = 0.01;
