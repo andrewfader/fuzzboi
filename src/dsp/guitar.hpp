@@ -73,6 +73,10 @@ struct StringSpec {
   double air_rate;
   double ei_measured;     // bending stiffness (N m^2) when it was measured; 0 to compute it
   bool wound;
+  // Loss between a winding and a soft core, per kilohertz: the wrap rubs on a nylon floss core
+  // more the faster it is bent, so a classical bass's upper partials die in a few seconds
+  // while its fundamental rings for twenty (recorded basses: tools/guitar_critic.py).
+  double eta_w = 0.0;
 };
 
 inline constexpr double kSteelYoung = 2.0e11;
@@ -192,9 +196,9 @@ inline constexpr std::array<StringSpec, kStrings> kNickelRegularLights{{
 // drag is Stokes' (his fitted air term, taken as a decay rate, held the bass fundamentals to about
 // 11 s, where recorded classical basses ring 10 to 38 s; tools/guitar_critic.py).
 inline constexpr std::array<StringSpec, kStrings> kNylonNormal{{
-    {"J4506", 0.043, 0.00030632, 0.55, Core::Nylon, 2.0e-5, 2.0e-2, 0.0, 57e-6, true},
-    {"J4505", 0.035, 0.00018416, 0.55, Core::Nylon, 7.0e-5, 2.5e-2, 0.0, 40e-6, true},
-    {"J4504", 0.029, 0.00010754, 0.55, Core::Nylon, 5.0e-5, 2.0e-2, 0.0, 51e-6, true},
+    {"J4506", 0.043, 0.00030632, 0.55, Core::Nylon, 2.0e-5, 2.0e-2, 0.0, 57e-6, true, 4.5e-4},
+    {"J4505", 0.035, 0.00018416, 0.55, Core::Nylon, 7.0e-5, 2.5e-2, 0.0, 40e-6, true, 4.5e-4},
+    {"J4504", 0.029, 0.00010754, 0.55, Core::Nylon, 5.0e-5, 2.0e-2, 0.0, 51e-6, true, 4.5e-4},
     {"J4503", 0.0403, 0.00004679, 1.00, Core::Nylon, 1.4e-4, 2.0e-2, 0.0, 0.0, false},
     {"J4502", 0.0322, 0.00002827, 1.00, Core::Nylon, 2.5e-4, 2.0e-2, 0.0, 0.0, false},
     {"J4501", 0.0280, 0.00002092, 1.00, Core::Nylon, 2.5e-4, 2.4e-2, 0.0, 0.0, false},
@@ -612,7 +616,8 @@ inline double decay_rate(const StringPhysics& p, const GuitarSpec& g, double f0,
   // frequency. Fully dead, a wound string's 2 kHz partial is gone in about a tenth of a second
   // and a plain one's in about a second, while the fundamental hardly changes.
   const double grime = 1.0 + age * (p.spec.wound ? 25.0 : 8.0) * std::min(hz / 1000.0, 4.0);
-  const double eta = (p.tension * p.spec.eta_f * grime + stiff * p.spec.eta_b) / (p.tension + stiff);
+  const double wrap = p.spec.eta_w * std::min(hz / 1000.0, 6.0);
+  const double eta = (p.tension * (p.spec.eta_f * grime + wrap) + stiff * p.spec.eta_b) / (p.tension + stiff);
   const double internal = 0.5 * w * eta;
   const double bridge = 2.0 * p.impedance * bridge_conductance(g, hz) * bridge_scale * f0;
   // A palm resting by the saddle: flesh is a broadband, mostly resistive load, hardest on the
@@ -1210,14 +1215,19 @@ class Guitar {
     const double hardness = std::clamp(setup_.hardness, 0.0, 1.0);
     // Displacement at the pluck point, from a feather touch to a hard dig (metres).
     const double amplitude = (0.25 + 2.75 * vel) * 1e-3;
-    // Contact width (finger flesh about 15 mm, a pick's edge 1 mm) and slip-off time (a fingertip
-    // rolls off in about a third of a millisecond, a pick snaps off in a few hundredths; harder
-    // plucks snap faster) round the triangle's corner over a stretch of string, never more than a
-    // sixth of it: a finger does not smear a treble string end to end.
+    // Contact width (finger flesh about 15 mm, a pick's edge 1 mm) and the release round the
+    // triangle's corner over a stretch of string. The release: the string slides out of the flesh
+    // it was pressed into (about 2 mm) or over a nail's or a hard pick's edge (a sixth of a
+    // millimetre) at the speed its own pull gives it, F / 2Z with F the pull of the displaced
+    // string, and in that time the corner travels c t along the string: a stretch of
+    // 2 d a (L - a) / (A L), the same on every string for a given pluck, longer for a gentle one
+    // (velocity brightness), a tenth of the string at a moderate stroke. Never more than a sixth:
+    // a finger does not smear a treble string end to end, and a rounding that reaches both ends
+    // of the string leaves almost no displacement at all, only the scrape.
     const double contact = lerp(0.015, 0.001, hardness);
-    const double slip_s = lerp(0.35e-3, 0.03e-3, hardness) * (1.3 - 0.6 * std::min(vel, 1.0)) * setup_.slip_scale;
-    const double c = 2.0 * length * st.hz;  // wave speed
-    const double width = std::min(contact + c * slip_s, length / 6.0);
+    const double slip_m = lerp(2.0e-3, 0.15e-3, hardness) * setup_.slip_scale;
+    const double release = 2.0 * slip_m * where * (length - where) / (amplitude * length);
+    const double width = std::min(contact + release, length / 6.0);
     // Mostly parallel to the top for a pick stroke, more into it for a finger.
     const double angle = (lerp(38.0, 22.0, hardness) + 8.0 * rng_.bipolar()) * kPi / 180.0;
     const double point = where / length * half;  // samples from the bridge
@@ -1227,9 +1237,9 @@ class Guitar {
     // The pick scraping off: a few milliseconds of noise at the contact point, louder on a wound
     // string, hardly any from a finger.
     st.excite_left = static_cast<int>(rate_ * lerp(0.004, 0.0025, hardness));
-    st.excite_level = static_cast<float>(amplitude * 0.004 * hardness * hardness * (st.wound ? 1.6 : 0.6));
+    st.excite_level = static_cast<float>(amplitude * 0.002 * hardness * hardness * (st.wound ? 1.6 : 0.6));
     st.excite_point = point;
-    st.excite_tone.set(lerp(800.0, 2500.0, hardness), rate_);
+    st.excite_tone.set(lerp(600.0, 1500.0, hardness), rate_);
     st.env = static_cast<float>(amplitude * 0.5);
     st.onset = 0.0f;
     st.onset_step = static_cast<float>(1.0 / std::max(1.0, rate_ * lerp(2.0e-3, 0.5e-3, hardness)));
@@ -1704,7 +1714,13 @@ class Guitar {
   void build_shape(double half, double point, double width) {
     const int n = std::min(static_cast<int>(half) + 2, static_cast<int>(shape_.size()) / 3 - 2);
     point = std::clamp(point, 1.0, half - 1.0);
-    const int w = std::clamp(static_cast<int>(width), 1, std::max(1, n / 3));
+    // Four passes of a box of about seven tenths the width (a near-Gaussian of the same spread
+    // as two passes of the full width): a corner rounded by a triangle still leaves the box's
+    // sidelobes, a few percent of the first 30 ms above 3 kHz whatever the width, and the string
+    // leaves a fingertip or a pick smoothly.
+    // An odd box centres exactly; an even one sits half a sample off, and four passes of that
+    // move the shape two samples, enough to fill the notch a pluck at the middle leaves.
+    const int w = std::clamp(static_cast<int>(width * 0.71), 1, std::max(1, n / 6)) | 1;
     const auto triangle = [&](double x) { return x <= point ? x / point : (half - x) / (half - point); };
     // ext[i + n] holds the odd extension at position i, for i in [-n, 2n].
     const auto odd = [&](int i) -> float {
@@ -1717,7 +1733,7 @@ class Guitar {
       return static_cast<float>(sign * triangle(x));
     };
     for (int i = -n; i <= 2 * n; ++i) smooth_[static_cast<size_t>(i + n)] = odd(i);
-    for (int pass = 0; pass < 2; ++pass) {
+    for (int pass = 0; pass < 4; ++pass) {
       double acc = 0.0;
       // A centred box: the average over [i - w/2, i - w/2 + w).
       for (int i = -n; i <= 2 * n; ++i) {

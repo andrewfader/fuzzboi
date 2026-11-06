@@ -420,7 +420,7 @@ inline const std::vector<Preset>& all() {
       {"Comp. chime (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 2}, {kGuitarPickup, 2}, {kGuitarPick, 0.9}, {kGuitarPluck, 75},
                               {kCabinet, 0.7}, {kCabType, 2}, {kWall, 0.5}, {kWallChamber, 0.1}, {kWallSquash, 1}, {kChorusMix, 0.2},
                               {kChorusMode, 0}, {kChordType, 1}, {kChordVoicing, 2}, {kChordStrum, 30}, {kSpringMix, 0.15},
-                              {kReleaseMs, 1200}, {kSustain, 0}, {kDecayMs, 4000}, {kMasterDb, -6.4}}},
+                              {kReleaseMs, 1200}, {kSustain, 0}, {kDecayMs, 4000}, {kMasterDb, -4.1}}},
       // twin of "Leslie guitar" on the physical guitar (single-coil)
       {"Leslie guitar (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 2}, {kGuitarPickup, 1}, {kGuitarPick, 0.7}, {kGuitarPluck, 107},
                                 {kCabinet, 0.4}, {kCabType, 0}, {kRotaryMix, 0.9}, {kRotarySpeed, 6.5}, {kVerbMix, 0.2},
@@ -454,7 +454,7 @@ inline const std::vector<Preset>& all() {
       {"Liquid chorus (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 2}, {kGuitarPickup, 2}, {kGuitarPick, 0.9}, {kGuitarPluck, 60},
                                 {kChorusMix, 0.7}, {kChorusMode, 2}, {kChorusDepth, 0.8}, {kEchoMix, 0.45}, {kEchoHeads, 6},
                                 {kEchoTime, 420}, {kEchoFeedback, 0.55}, {kEchoWow, 0.35}, {kVerbMix, 0.55}, {kVerbSize, 0.85},
-                                {kVerbShimmer, 0.3}, {kReleaseMs, 2000}, {kSustain, 0}, {kDecayMs, 4000}, {kMasterDb, -3.5}}},
+                                {kVerbShimmer, 0.3}, {kReleaseMs, 2000}, {kSustain, 0}, {kDecayMs, 4000}, {kMasterDb, -1.6}}},
       // twin of "Drowned feedback fuzz" on the physical guitar (humbucker)
       {"Drowned fuzz (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 3}, {kGuitarPickup, 2}, {kGuitarPick, 0.7}, {kGuitarPluck, 75},
                                {kFuzz, 0.9}, {kFuzzMode, 2}, {kFuzzTone, 0.7}, {kCabinet, 0.9}, {kCabType, 1}, {kFeedbackAmount, 0.6},
@@ -551,7 +551,7 @@ inline const std::vector<Preset>& all() {
                                  {kReleaseMs, 300}, {kSustain, 0.6}, {kDoubleTrack, 0.75}, {kMicPattern, 2}, {kMasterDb, -4.5}}},
       // A saturated humbucker, picked soft and close to the bridge, through a plexi-style stack with
       // chorus and a short echo; two takes overdubbed wide, a figure-8 half a metre back in a booth.
-      {"Arena sustain (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 3}, {kGuitarPickup, 2}, {kGuitarPick, 0.14}, {kGuitarPluck, 48},
+      {"Arena sustain (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 3}, {kGuitarPickup, 2}, {kGuitarPick, 0.6}, {kGuitarPluck, 48},
                                {kUnison, 2}, {kUnisonDetune, 5}, {kStereoSpread, 1}, {kFuzz, 0.95}, {kFuzzMode, 3}, {kFuzzTone, 0.6},
                                {kCabinet, 1}, {kCabType, 1}, {kChorusMix, 0.35}, {kChorusMode, 3}, {kEchoMix, 0.12}, {kEchoTime, 320},
                                {kRoomSize, 1}, {kRoomAbsorption, 0.39}, {kMicDistance, 0.49}, {kReleaseMs, 250}, {kSustain, 0.85}, {kNoiseFloor, -40}, {kMicPattern, 2}, {kDoubleTrack, 1}, {kMasterDb, -4.4}}},
@@ -562,7 +562,7 @@ inline const std::vector<Preset>& all() {
                                 {kRoomSize, 4}, {kRoomAbsorption, 0.15}, {kMicDistance, 0.86}, {kReleaseMs, 200}, {kSustain, 0.7}, {kDoubleTrack, 0.65}, {kNoiseFloor, -40}, {kMasterDb, -6.6}}},
       // A dreadnought in DADGAD, picked hard, an omni two metres back in a stone-walled room on a cool,
       // damp day.
-      {"Open-tuned flat-top (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 0}, {kGuitarTuning, 3}, {kGuitarPick, 0.91}, {kGuitarPluck, 148},
+      {"Open-tuned flat-top (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 0}, {kGuitarTuning, 3}, {kGuitarPick, 1}, {kGuitarPluck, 120},
                                      {kRoomSize, 3}, {kRoomAbsorption, 0.2}, {kMicDistance, 2.09}, {kHumidity, 0.6}, {kTemperature, 15},
                                      {kReleaseMs, 1200}, {kSustain, 0}, {kDecayMs, 4000}, {kNoiseFloor, -71}, {kMasterDb, -0.7}}},
       // A single coil played with the fingers right by the bridge, both pickups, into a clean tweed amp
@@ -573,12 +573,12 @@ inline const std::vector<Preset>& all() {
       // A hot humbucker on both pickups into a fully cranked plexi-style head, an echo and a plate, a
       // figure-8 two metres back in a live room, the take doubled wide.
       {"Brown humbucker (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 3}, {kGuitarPickup, 1}, {kGuitarPick, 0.91}, {kGuitarPluck, 45},
-                                 {kFuzz, 1}, {kFuzzMode, 3}, {kFuzzTone, 0.57}, {kCabinet, 1}, {kCabType, 1},
+                                 {kFuzz, 1}, {kFuzzMode, 3}, {kFuzzTone, 0.7}, {kCabinet, 1}, {kCabType, 1},
                                  {kEchoMix, 0.15}, {kEchoTime, 380}, {kEchoFeedback, 0.2}, {kVerbMix, 0.25}, {kVerbSize, 0.6},
                                  {kRoomSize, 3}, {kRoomAbsorption, 0.46}, {kMicDistance, 1.86}, {kReleaseMs, 200}, {kSustain, 0.8}, {kNoiseFloor, -40}, {kDoubleTrack, 1}, {kMicPattern, 2}, {kMasterDb, -2.1}}},
       // A humbucker picked softly toward the neck through a muff-style pedal into a British stack,
       // close-miked in a small room, overdubbed hard left and right.
-      {"Rainy-city crunch (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 3}, {kGuitarPickup, 2}, {kGuitarPick, 0.91}, {kGuitarPluck, 140},
+      {"Rainy-city crunch (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 3}, {kGuitarPickup, 2}, {kGuitarPick, 0.75}, {kGuitarPluck, 140},
                                    {kUnison, 2}, {kUnisonDetune, 5}, {kStereoSpread, 0.8}, {kFuzz, 0.9}, {kFuzzMode, 0}, {kFuzzTone, 0.55},
                                    {kCabinet, 1}, {kCabType, 1}, {kRoomSize, 1}, {kRoomAbsorption, 0.8}, {kMicDistance, 0.3},
                                    {kHumidity, 0.8}, {kTemperature, 12}, {kReleaseMs, 200}, {kSustain, 0.7}, {kDoubleTrack, 1}, {kNoiseFloor, -40}, {kMasterDb, -3.7}}},
@@ -590,11 +590,11 @@ inline const std::vector<Preset>& all() {
                                    {kRoomSize, 5}, {kRoomAbsorption, 0.2}, {kMicDistance, 0.37}, {kReleaseMs, 200}, {kSustain, 0.8}, {kDoubleTrack, 1}, {kMicPattern, 0}, {kNoiseFloor, -40}, {kMasterDb, -5.2}}},
       // A fibreglass department-store guitar into a full fuzz and a small tweed amplifier, a figure-8 in
       // a dry booth, the amp hissing.
-      {"Fibreglass fuzz (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 11}, {kGuitarPickup, 2}, {kGuitarPick, 0.57}, {kGuitarPluck, 56},
+      {"Fibreglass fuzz (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 11}, {kGuitarPickup, 2}, {kGuitarPick, 0.85}, {kGuitarPluck, 56},
                                  {kFuzz, 1}, {kFuzzMode, 0}, {kFuzzTone, 0.4}, {kCabinet, 1}, {kCabType, 0},
-                                 {kRoomSize, 1}, {kRoomAbsorption, 0.24}, {kMicDistance, 0.87}, {kReleaseMs, 150}, {kSustain, 0.8}, {kMicPattern, 2}, {kNoiseFloor, -51}, {kMasterDb, -8.7}}},
+                                 {kRoomSize, 1}, {kRoomAbsorption, 0.24}, {kMicDistance, 0.87}, {kReleaseMs, 150}, {kSustain, 0.8}, {kMicPattern, 2}, {kNoiseFloor, -46}, {kMasterDb, -8.7}}},
       // A grand auditorium cutaway strummed hard, an omni two metres back in a live room.
-      {"Auditorium strum (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 8}, {kGuitarPick, 0.81}, {kGuitarPluck, 133},
+      {"Auditorium strum (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 8}, {kGuitarPick, 1}, {kGuitarPluck, 133},
                                   {kRoomSize, 3}, {kRoomAbsorption, 0.16}, {kMicDistance, 2.58}, {kHumidity, 0.5},
                                   {kReleaseMs, 600}, {kSustain, 0}, {kDecayMs, 3000}, {kDoubleTrack, 0.15}, {kNoiseFloor, -58}, {kMicPattern, 2}, {kMasterDb, -12.5}}},
       // A single coil's neck pickup into a germanium fuzz and a loud British stack, a little vibrato,
@@ -608,7 +608,7 @@ inline const std::vector<Preset>& all() {
       {"Cranked humbucker lead (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 3}, {kGuitarPickup, 2}, {kGuitarPick, 0.91}, {kGuitarPluck, 48},
                                       {kFuzz, 0.9}, {kFuzzMode, 3}, {kFuzzTone, 0.35}, {kCabinet, 0.9}, {kCabType, 1},
                                       {kVibratoDepth, 15}, {kVibratoRate, 5}, {kVibratoDelay, 300},
-                                      {kRoomSize, 1}, {kRoomAbsorption, 0.3}, {kMicDistance, 2.71}, {kReleaseMs, 300}, {kSustain, 0.85}, {kDoubleTrack, 0.88}, {kMicPattern, 1}, {kNoiseFloor, -81}, {kMasterDb, -13.1}}},
+                                      {kRoomSize, 1}, {kRoomAbsorption, 0.3}, {kMicDistance, 2.71}, {kReleaseMs, 300}, {kSustain, 0.85}, {kDoubleTrack, 0.88}, {kMicPattern, 1}, {kNoiseFloor, -81}, {kMasterDb, -11.4}}},
       // A single coil on both pickups, picked lightly, a muff, a long delay and a big room: the
       // floating, spacious lead.
       {"Floating delay lead (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 2}, {kGuitarPickup, 3}, {kGuitarPick, 0.34}, {kGuitarPluck, 126},
@@ -621,19 +621,19 @@ inline const std::vector<Preset>& all() {
                                  {kCabinet, 0.81}, {kCabType, 2}, {kMachineDrive, 0}, {kReleaseMs, 600}, {kSustain, 0}, {kDecayMs, 3000}, {kNoiseFloor, -46}, {kMicDistance, 0.24}, {kMicPattern, 2}, {kFuzz, 0.25}, {kFuzzTone, 0.9}, {kMachineBandwidth, 8200}, {kRoomSize, 4}, {kRoomAbsorption, 0.46}, {kMasterDb, -8.2}}},
       // An electric twelve on its neck pickup arpeggiated through a chorus and a slap echo, two takes, a
       // live room.
-      {"Arpeggio 12 (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 5}, {kGuitarPickup, 0}, {kGuitarPick, 0.91}, {kGuitarPluck, 40},
+      {"Arpeggio 12 (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 5}, {kGuitarPickup, 0}, {kGuitarPick, 1}, {kGuitarPluck, 32},
                              {kCabinet, 0.15}, {kCabType, 2}, {kEchoMix, 0.12}, {kEchoTime, 140}, {kStereoSpread, 0.6}, {kUnison, 2}, {kUnisonDetune, 3},
                              {kRoomSize, 3}, {kRoomAbsorption, 0.16}, {kMicDistance, 1.23}, {kReleaseMs, 900}, {kSustain, 0}, {kDecayMs, 4000}, {kNoiseFloor, -54}, {kDoubleTrack, 0.48}, {kChorusMix, 0.24}, {kMasterDb, -19.1}}},
       // A plate-bridge single coil arpeggiated far up the string through a chorus, a figure-8 a metre
       // back in a dead booth, the amp's hiss under it.
-      {"Chorused arpeggios (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 9}, {kGuitarPickup, 2}, {kGuitarPick, 0.91}, {kGuitarPluck, 183},
+      {"Chorused arpeggios (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 9}, {kGuitarPickup, 2}, {kGuitarPick, 1}, {kGuitarPluck, 120},
                                     {kChorusMix, 0}, {kChorusMode, 1}, {kCabinet, 0}, {kCabType, 0},
-                                    {kRoomSize, 1}, {kRoomAbsorption, 0.8}, {kMicDistance, 2.71}, {kReleaseMs, 700}, {kSustain, 0}, {kDecayMs, 3000}, {kMicPattern, 1}, {kNoiseFloor, -60}, {kMasterDb, -4.2}}},
+                                    {kRoomSize, 1}, {kRoomAbsorption, 0.8}, {kMicDistance, 2.71}, {kReleaseMs, 700}, {kSustain, 0}, {kDecayMs, 3000}, {kMicPattern, 1}, {kNoiseFloor, -60}, {kMasterDb, -5.4}}},
       // A plate-bridge single coil, picked medium, straight in with a hint of drive, two takes, a
       // figure-8 close in a dead booth.
       {"Twin clean leads (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 9}, {kGuitarPickup, 2}, {kGuitarPick, 0.38}, {kGuitarPluck, 48},
                                   {kCabinet, 0}, {kCabType, 0}, {kFuzz, 0.15}, {kFuzzMode, 3}, {kUnison, 2}, {kUnisonDetune, 2}, {kStereoSpread, 0.8},
-                                  {kRoomSize, 1}, {kRoomAbsorption, 0.09}, {kMicDistance, 0.37}, {kReleaseMs, 300}, {kSustain, 0.6}, {kMicPattern, 2}, {kDoubleTrack, 0.55}, {kNoiseFloor, -66}, {kChorusMix, 0.35}, {kMasterDb, -15.2}}},
+                                  {kRoomSize, 1}, {kRoomAbsorption, 0.09}, {kMicDistance, 0.37}, {kReleaseMs, 300}, {kSustain, 0.6}, {kMicPattern, 2}, {kDoubleTrack, 0.55}, {kNoiseFloor, -66}, {kChorusMix, 0.35}, {kMasterDb, -12.4}}},
       // A battered humbucker's neck pickup dug into hard, a full fuzz into a cranked tweed, a deadened
       // big room, partly overdubbed: ragged, dark, loud.
       {"Ragged tweed fuzz (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 3}, {kGuitarPickup, 0}, {kGuitarPick, 0.67}, {kGuitarPluck, 56}, {kGuitarAge, 0.6},
@@ -641,12 +641,12 @@ inline const std::vector<Preset>& all() {
                                    {kRoomSize, 4}, {kRoomAbsorption, 0.76}, {kMicDistance, 2.21}, {kReleaseMs, 250}, {kSustain, 0.8}, {kDoubleTrack, 0.72}, {kNoiseFloor, -45}, {kMasterDb, -7.8}}},
       // An offset in open G, scraped with a soft pick by the neck through a big fuzz into a tweed,
       // a big live room, overdubbed: noise-rock chords.
-      {"Detuned noise (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 10}, {kGuitarTuning, 4}, {kGuitarPickup, 2}, {kGuitarPick, 0.05}, {kGuitarPluck, 198},
+      {"Detuned noise (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 10}, {kGuitarTuning, 4}, {kGuitarPickup, 2}, {kGuitarPick, 0.6}, {kGuitarPluck, 198},
                                {kFuzz, 0.8}, {kFuzzMode, 2}, {kFuzzTone, 0.65}, {kCabinet, 1}, {kCabType, 0},
-                               {kRoomSize, 4}, {kRoomAbsorption, 0.16}, {kMicDistance, 1.23}, {kReleaseMs, 400}, {kSustain, 0.8}, {kDoubleTrack, 0.48}, {kNoiseFloor, -71}, {kMasterDb, -8.9}}},
+                               {kRoomSize, 4}, {kRoomAbsorption, 0.16}, {kMicDistance, 1.23}, {kReleaseMs, 400}, {kSustain, 0.8}, {kDoubleTrack, 0.48}, {kNoiseFloor, -71}, {kMasterDb, -10}}},
       // An offset's whammy bar never still, a muff, reverse reverb and three unison layers in a big
       // damped room: the gliding wall.
-      {"Glide wall (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 10}, {kGuitarPickup, 2}, {kGuitarPick, 0.57}, {kGuitarPluck, 113},
+      {"Glide wall (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 10}, {kGuitarPickup, 2}, {kGuitarPick, 0.65}, {kGuitarPluck, 113},
                             {kFuzz, 0.9}, {kFuzzMode, 0}, {kFuzzTone, 0.65}, {kCabinet, 1}, {kCabType, 1},
                             {kVibratoDepth, 25}, {kVibratoRate, 0.8}, {kVibratoDelay, 0}, {kUnison, 3}, {kUnisonDetune, 10}, {kStereoSpread, 1},
                             {kBackwardsMix, 0.3}, {kBackwardsChunk, 600}, {kVerbMix, 0.35}, {kVerbSize, 0.8},
@@ -665,7 +665,7 @@ inline const std::vector<Preset>& all() {
       // booth, overdubbed: the dark drone chug.
       {"Loft drone chug (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 7}, {kGuitarPickup, 2}, {kGuitarPick, 0.62}, {kGuitarPluck, 70},
                                  {kFuzz, 0.8}, {kFuzzMode, 1}, {kFuzzTone, 0.3}, {kCabinet, 0.96}, {kCabType, 0},
-                                 {kRoomSize, 1}, {kRoomAbsorption, 0.12}, {kMicDistance, 1.84}, {kReleaseMs, 250}, {kSustain, 0.7}, {kMicPattern, 2}, {kDoubleTrack, 0.9}, {kNoiseFloor, -68}, {kMasterDb, -13.5}}},
+                                 {kRoomSize, 1}, {kRoomAbsorption, 0.12}, {kMicDistance, 1.84}, {kReleaseMs, 250}, {kSustain, 0.7}, {kMicPattern, 2}, {kDoubleTrack, 0.9}, {kNoiseFloor, -68}, {kMasterDb, -12.1}}},
       // Not gated (no reference recordings in the corpus): a jazz archtop's neck humbucker,
       // flatwounds, a warm tweed amplifier and a small club.
       {"Archtop warm (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 7}, {kGuitarPickup, 0}, {kGuitarPick, 0.55}, {kGuitarPluck, 110},
@@ -689,9 +689,9 @@ inline const std::vector<Preset>& all() {
       // --- the eighth round: presets for the second batch of records (more of them gated) -------
       // A humbucker on both pickups, picked far up the string, into a cranked British stack, an omni
       // two metres back in a live room, partly overdubbed: crunchy power pop.
-      {"Power-pop crunch (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 3}, {kGuitarPickup, 1}, {kGuitarPick, 0.9}, {kGuitarPluck, 168},
-                                  {kFuzz, 0.75}, {kFuzzMode, 3}, {kFuzzTone, 0.7}, {kCabinet, 0.9}, {kCabType, 1}, {kDoubleTrack, 0.25},
-                                  {kRoomSize, 3}, {kRoomAbsorption, 0.3}, {kMicDistance, 1.97}, {kMicPattern, 0}, {kReleaseMs, 250}, {kSustain, 0.7}, {kNoiseFloor, -54}, {kMasterDb, -7.6}}},
+      {"Power-pop crunch (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 3}, {kGuitarPickup, 1}, {kGuitarPick, 1}, {kGuitarPluck, 120},
+                                  {kFuzz, 0.75}, {kFuzzMode, 3}, {kFuzzTone, 0.8}, {kCabinet, 0.9}, {kCabType, 1}, {kDoubleTrack, 0.25},
+                                  {kRoomSize, 3}, {kRoomAbsorption, 0.3}, {kMicDistance, 1.97}, {kMicPattern, 0}, {kReleaseMs, 250}, {kSustain, 0.7}, {kNoiseFloor, -54}, {kMasterDb, -9.7}}},
       // A semi-hollow on both pickups into a driven tweed amp through a wah left mostly open and
       // nudged by the playing, a cardioid three metres back in a live room: chiming baggy guitar.
       {"Baggy semi-hollow (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 12}, {kGuitarPickup, 3}, {kGuitarPick, 0.85}, {kGuitarPluck, 56},
@@ -726,7 +726,7 @@ inline const std::vector<Preset>& all() {
                                        {kReleaseMs, 500}, {kSustain, 0}, {kDecayMs, 3000}, {kNoiseFloor, -41}, {kDoubleTrack, 0.68}, {kChorusMix, 0.09}, {kMasterDb, -7.1}}},
       // A plate-bridge single coil into a germanium fuzz and a British stack with chorus and a short
       // echo, a figure-8 back in a small cold room, partly overdubbed.
-      {"Cold-room chorus (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 9}, {kGuitarPickup, 2}, {kGuitarPick, 0.67}, {kGuitarPluck, 50},
+      {"Cold-room chorus (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 9}, {kGuitarPickup, 2}, {kGuitarPick, 0.85}, {kGuitarPluck, 50},
                                   {kFuzz, 0.45}, {kFuzzMode, 1}, {kFuzzTone, 0.4}, {kCabinet, 0.9}, {kCabType, 1}, {kChorusMix, 0.3}, {kChorusMode, 1},
                                   {kEchoMix, 0.15}, {kEchoTime, 280}, {kRoomSize, 2}, {kRoomAbsorption, 0.16}, {kMicDistance, 1.72}, {kMicPattern, 2},
                                   {kTemperature, 12}, {kReleaseMs, 250}, {kSustain, 0.6}, {kNoiseFloor, -74}, {kDoubleTrack, 0.65}, {kMasterDb, -11.6}}},

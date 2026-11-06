@@ -42,10 +42,13 @@ import numpy as np
 RATE = 48000
 
 # How each recording maps onto a model: instrument -> (model, pick hardness, pluck mm, pickup).
+# The player assumed for each: a classical guitarist's nails (a hard edge, between the soundhole
+# and the bridge), a medium pick on the steel and the electric (none of the recordings says
+# what the player held; a hard pick leaves the first 30 ms far brighter than any of them).
 MODELS = {
-    "nylon": (1, 0.15, 130.0, 0),
-    "steel": (0, 0.85, 100.0, 0),
-    "electric": (2, 0.85, 90.0, 2),
+    "nylon": (1, 0.7, 105.0, 0),
+    "steel": (0, 0.6, 100.0, 0),
+    "electric": (2, 0.6, 90.0, 2),
 }
 MODEL_NAMES = ["Steel dreadnought", "Nylon classical", "Single-coil solid", "Humbucker solid"]
 

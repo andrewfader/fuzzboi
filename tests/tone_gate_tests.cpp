@@ -52,9 +52,9 @@ SCENARIO(each_records_preset_sounds_like_the_records) {
       for (int b = 2; b <= 21; ++b) std::printf(" %+.0f", f.band_db[static_cast<size_t>(b)] - ref->band_db[static_cast<size_t>(b)]);
       std::printf("\n");
     }
-    if (c.flatness_allowance_db > 0.0 || c.hf_allowance_db > 0.0)
-      std::printf("      (allowance: flatness %.1f dB lower, share above 3 kHz %.1f dB higher than the records' range)\n",
-                  c.flatness_allowance_db, c.hf_allowance_db);
+    if (c.flatness_allowance_db > 0.0 || c.hf_allowance_db > 0.0 || c.shape_allowance_db > 0.0)
+      std::printf("      (allowance: flatness %.1f dB lower, share above 3 kHz %.1f dB beyond the records' range, shape %.1f dB over the limit)\n",
+                  c.flatness_allowance_db, c.hf_allowance_db, c.shape_allowance_db);
     CHECK(v.failures.empty(), std::string(c.preset) + ": " + v.failures);
   }
 }
