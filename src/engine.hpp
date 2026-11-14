@@ -410,6 +410,9 @@ class Engine {
     pending_count_ = 0;
     peak_l_ = peak_r_ = 0.0f;
     clipped_ = false;
+    // Each note's pick and string noise are drawn from its count since the reset, so a host that
+    // resets before a bounce hears the same notes every time.
+    age_counter_ = 0;
   }
 
   // --- samples (main thread writes, audio thread reads) ---

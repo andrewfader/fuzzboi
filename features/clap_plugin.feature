@@ -31,6 +31,12 @@ Feature: FUZZBOI is a well-behaved CLAP instrument
     Given two instances from one module
     Then a change in one does not touch the other
 
+  # a_reset_instance_plays_a_phrase_as_it_did_the_first_time
+  Scenario: A reset instance plays a phrase as it did the first time
+    Given an instance that has played a phrase on a physical guitar
+    When the host resets it and plays the phrase again
+    Then every block sounds exactly as it did the first time
+
   # a_clap_note_on_makes_sound_and_note_off_stops_it
   Scenario: A CLAP note on makes sound and note off stops it
     Given an instance with a 50 ms release, given a CLAP note on
