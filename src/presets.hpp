@@ -735,6 +735,31 @@ inline const std::vector<Preset>& all() {
       {"Freakbeat bender (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 11}, {kGuitarPickup, 2}, {kGuitarPick, 0.95}, {kGuitarPluck, 50},
                                   {kFuzz, 0.8}, {kFuzzMode, 2}, {kFuzzTone, 0.6}, {kCabinet, 1}, {kCabType, 2},
                                   {kRoomSize, 2}, {kRoomAbsorption, 0.3}, {kMicDistance, 0.6}, {kMicPattern, 1}, {kReleaseMs, 200}, {kSustain, 0.7}, {kMasterDb, -13.5}}},
+      // --- the ninth round: presets for The War on Drugs and Portugal. The Man records -------------
+      // An offset single coil on its neck pickup dug into hard, a cranked Plexi, a chorus, a dotted
+      // echo and a long chamber, an omni well back in a club-sized room, partly overdubbed: the
+      // dark, washy heartland lead.
+      {"Heartland shimmer lead (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 10}, {kGuitarPickup, 0}, {kGuitarPick, 0.86}, {kGuitarPluck, 98},
+                                         {kFuzz, 1}, {kFuzzMode, 3}, {kCabinet, 0.9}, {kCabType, 0}, {kChorusMix, 0.3}, {kEchoMix, 0.3}, {kEchoSync, 1},
+                                         {kEchoDivision, 2}, {kEchoFeedback, 0.4}, {kVerbMix, 0.35}, {kVerbSize, 0.8}, {kRoomSize, 4}, {kRoomAbsorption, 0.3},
+                                         {kMicDistance, 2.7}, {kReleaseMs, 500}, {kSustain, 0.8}, {kDoubleTrack, 0.48}, {kNoiseFloor, -53.5}, {kMasterDb, -2.4}}},
+      // A single coil strummed on both pickups into a clean amp with a chorus, an echo and a long
+      // chamber, double-tracked wide: the washed rhythm guitar under it.
+      {"Heartland wash rhythm (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 2}, {kGuitarPickup, 0}, {kGuitarPick, 0.651}, {kGuitarPluck, 85.1},
+                                        {kFuzz, 0.9}, {kFuzzMode, 3}, {kFuzzTone, 0.402}, {kCabinet, 0.95}, {kCabType, 0}, {kChorusMix, 0.285}, {kEchoMix, 0.338},
+                                        {kEchoSync, 1}, {kEchoDivision, 2}, {kEchoFeedback, 0.3}, {kVerbMix, 0.547}, {kVerbSize, 0.913}, {kRoomSize, 4},
+                                        {kRoomAbsorption, 0.3}, {kMicDistance, 0.591}, {kReleaseMs, 500}, {kSustain, 0.6}, {kDoubleTrack, 0.9},
+                                        {kNoiseFloor, -56.6}, {kMasterDb, 4}}},
+      // A humbucker's middle position picked hard near the bridge into a pushed Plexi and a British
+      // cabinet, an omni in a booth, a little overdubbing: the 2006-08 prog-psych crunch.
+      {"Psych-prog crunch (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 3}, {kGuitarPickup, 1}, {kGuitarPick, 0.95}, {kGuitarPluck, 70},
+                                    {kFuzz, 0.8}, {kFuzzMode, 3}, {kFuzzTone, 0.5}, {kCabinet, 0.9}, {kCabType, 1}, {kRoomSize, 1}, {kRoomAbsorption, 0.3},
+                                    {kMicDistance, 1.0}, {kMicPattern, 0}, {kReleaseMs, 300}, {kSustain, 0.7}, {kDoubleTrack, 0.22}, {kNoiseFloor, -48.5}, {kMasterDb, -10}}},
+      // A semi-hollow on both pickups picked hard near the bridge into a dark Face fuzz flat out and
+      // a tweed, close and dry in a booth: the fuzzy psych-soul guitar of the 2010-13 records.
+      {"Psych-soul fuzz (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 12}, {kGuitarPickup, 1}, {kGuitarPick, 0.86}, {kGuitarPluck, 55},
+                                  {kFuzz, 1}, {kFuzzMode, 1}, {kFuzzTone, 0.4}, {kCabinet, 0.96}, {kCabType, 0}, {kRoomSize, 1}, {kRoomAbsorption, 0.3},
+                                  {kMicDistance, 0.5}, {kReleaseMs, 200}, {kSustain, 0.7}, {kDoubleTrack, 0.3}, {kNoiseFloor, -53.5}, {kMasterDb, -6.5}}},
   };
   return table;
 }

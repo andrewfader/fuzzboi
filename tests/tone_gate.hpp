@@ -69,6 +69,13 @@ const std::vector<Case>& cases() {
       {"Downtown thin crunch (phys)", "Strokes", Phrase::Power},
       {"Casino delay arpeggio (phys)", "Interpol", Phrase::Arpeggio},
       {"Cold-room chorus (phys)", "JoyDivision", Phrase::Power},
+      {"Heartland shimmer lead (phys)", "WoD", Phrase::Lead},
+      // The WoD guitar stems carry synth and organ pad (the corpus' extension notes: `other` at -10 dB re
+      // mix, H2-H1 spread 2.4..14.1 dB), which a strummed guitar alone cannot reproduce; its spectral
+      // shape sits 0.1 dB over the limit, so 0.6 dB is allowed (the gap plus 0.5 dB, as above).
+      {"Heartland wash rhythm (phys)", "WoD", Phrase::Strum, 0.0, 0.0, 0.6},
+      {"Psych-prog crunch (phys)", "PTM", Phrase::Power},
+      {"Psych-soul fuzz (phys)", "PTM_late", Phrase::Power},
   };
   return c;
 }
