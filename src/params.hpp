@@ -82,6 +82,8 @@ enum ParamId : uint32_t {
   kWah, kWahPedal, kWahAuto,
   // --- appended in the eleventh round: one microphone or a pair --------------------------------------
   kMicSetup,
+  // --- appended in the twelfth round: how wide the singing saw's vibrato swings ---------------------
+  kSawVibrato,
   kParamCount
 };
 
@@ -148,7 +150,7 @@ constexpr const char* kRoomSizeNames[kRoomSizeCount] = {"Off", "Booth", "Bedroom
 constexpr std::array<double, kRoomSizeCount> kRoomVolumes{0.0, 10.0, 35.0, 150.0, 600.0, 3000.0, 12000.0};
 constexpr const char* kMicPatternNames[] = {"Omni", "Cardioid", "Figure-8"};
 constexpr const char* kMicSetupNames[] = {"Stereo pair", "Mono"};
-constexpr int kPresetCount = 168;  // The names live in presets.hpp; the table only needs the size.
+constexpr int kPresetCount = 173;  // The names live in presets.hpp; the table only needs the size.
 
 constexpr std::array<ParamSpec, kParamCount> kSpecs{{
     // voice
@@ -338,6 +340,7 @@ constexpr std::array<ParamSpec, kParamCount> kSpecs{{
     {"Wah pedal", "Pedals/Wah", 0, 1, 0.5, false, Unit::Percent, nullptr},
     {"Wah auto", "Pedals/Wah", 0, 1, 0, false, Unit::Percent, nullptr},
     {"Mic setup", "Room", 0, 1, 0, true, Unit::Options, kMicSetupNames},
+    {"Saw vibrato", "Toys/Saw", 0, 50, 21, false, Unit::Cents, nullptr},
 }};
 
 // The preset parameter's value names come from the preset table, which lives above this header

@@ -47,7 +47,7 @@ inline std::vector<PageSpec> fuzzboi_pages() {
        {{"Toy piano and music box", 0, {knob(kToyHammer), knob(kToyDamp), knob(kToyInharmonic)}},
         {"Electric jug", 0, {knob(kJugResonance), knob(kJugFlutter), knob(kJugGrowl)}},
         {"Theremin", 1, {knob(kThereminGlide), knob(kThereminShape), knob(kThereminUnison)}},
-        {"Saw and piccolo", 1, {knob(kSawBow), knob(kPiccoloBreath), knob(kPiccoloChaos)}},
+        {"Saw and piccolo", 1, {knob(kSawBow), knob(kSawVibrato), knob(kPiccoloBreath), knob(kPiccoloChaos)}},
         {"Jangle 12-string", 2, {knob(kJangleOctave), knob(kJangleBright), knob(kJangleDecay), knob(kJanglePick), knob(kJangleBody)}}}},
       {"PEDALS", "The pedalboard: wah, fuzz and amp, speaker cabinet, phaser, Juno chorus and flanger, rotary speaker and tremolo", theme::red, 3, 120,
        {{"Fuzz", 0, {knob(kFuzz), knob(kFuzzTone), knob(kFuzzLevel), segments(kFuzzMode, 3)}},
@@ -150,6 +150,7 @@ inline const char* fuzzboi_short_name(int id) {
     case kPiccoloBreath: return "Breath";
     case kPiccoloChaos: return "Chaos";
     case kSawBow: return "Bow";
+    case kSawVibrato: return "Vibrato";
     case kJangleOctave: return "Octave str.";
     case kJangleBright: return "Bright";
     case kJangleDecay: return "Decay";

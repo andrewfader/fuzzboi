@@ -254,7 +254,7 @@ class Voice {
   static dsp::ThereminSettings theremin_settings(const Settings& s) {
     return {s[params::kThereminGlide], s[params::kThereminShape], static_cast<int>(s[params::kThereminUnison])};
   }
-  static dsp::SawSettings saw_settings(const Settings& s) { return {s[params::kSawBow]}; }
+  static dsp::SawSettings saw_settings(const Settings& s) { return {s[params::kSawBow], s[params::kSawVibrato]}; }
   static dsp::PiccoloSettings piccolo_settings(const Settings& s) { return {s[params::kPiccoloBreath], s[params::kPiccoloChaos]}; }
   static dsp::JangleSettings jangle_settings(const Settings& s) {
     return {s[params::kJangleOctave], s[params::kJangleBright], s[params::kJangleDecay], s[params::kJanglePick], s[params::kJangleBody]};

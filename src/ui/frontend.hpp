@@ -34,7 +34,7 @@ bool gui_param_relevant(const Plugin* p, clap_id id) {
   if (id >= kToyHammer && id <= kToyInharmonic) return source == kSourceToyPiano || source == kSourceMusicBox;
   if (id >= kJugResonance && id <= kJugGrowl) return source == kSourceJug;
   if (id >= kThereminGlide && id <= kThereminUnison) return source == kSourceTheremin;
-  if (id == kSawBow) return source == kSourceSaw;
+  if (id == kSawBow || id == kSawVibrato) return source == kSourceSaw;
   if (id == kPiccoloBreath || id == kPiccoloChaos) return source == kSourcePiccolo;
   if (id >= kJangleOctave && id <= kJangleDecay) return source == kSourceJangle;
   if (id >= kGuitarModel && id <= kGuitarPosition) {
@@ -141,6 +141,7 @@ const char* gui_help(clap_id id) {
     case kPiccoloBreath: return "Breath noise through the plastic.";
     case kPiccoloChaos: return "How badly out of tune each note lands and wanders.";
     case kSawBow: return "Bow scrape at the start of each note.";
+    case kSawVibrato: return "How far the shaking hand bends the pitch either way, in cents.";
     case kJangleOctave: return "Level of the octave string in each course below the B.";
     case kJangleBright: return "Pick brightness.";
     case kJangleDecay: return "How long the strings ring.";

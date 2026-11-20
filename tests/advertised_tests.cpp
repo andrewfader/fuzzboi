@@ -17,6 +17,7 @@
 #include "audio_measure.hpp"
 #include "clap_harness.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdio>
@@ -185,6 +186,20 @@ auto PitchModHz(double expected, double tolerance = 0.6) {
     std::vector<double> window(track.begin() + 40, track.begin() + std::min<size_t>(track.size(), 200));
     const double hz = measure::modulation_hz(window, 0.005, expected * 0.4, expected * 2.5);
     return std::abs(hz - expected) <= tolerance ? ok() : fail("pitch wobble at %.2f Hz, expected %.2f", hz, expected);
+  };
+}
+// How far the pitch swings either way over the held note, in cents, at each end of the range.
+auto PitchSwingCents(double low, double high, double tolerance) {
+  const auto swing = [](const Render& r) {
+    const auto track = measure::pitch_track(std::vector<float>(r.mono.begin() + 24000, r.mono.begin() + static_cast<long>(r.note_off)), kRate, 0.005, 0.04, 100.0, 1000.0);
+    std::vector<double> cents;
+    for (double hz : track) if (hz > 0.0) cents.push_back(measure::cents(hz, 440.0));
+    std::sort(cents.begin(), cents.end());
+    return cents.empty() ? 0.0 : 0.5 * (cents[cents.size() * 98 / 100] - cents[cents.size() * 2 / 100]);
+  };
+  return [=](const Render& a, const Render& b) {
+    const double sa = swing(a), sb = swing(b);
+    return std::abs(sa - low) <= tolerance && std::abs(sb - high) <= tolerance ? ok() : fail("pitch swings %.1f and %.1f cents either way", sa, sb);
   };
 }
 auto DutyIs(double expected, double tolerance = 0.03) {
@@ -372,6 +387,8 @@ std::array<Proof, P::kParamCount> proofs() {
   set(kPiccoloBreath, ctx(kSourcePiccolo, {}, 84), 0, 1, MoreNoise());
   set(kPiccoloChaos, ctx(kSourcePiccolo, {}, 84), 0, 1, Differs());
   set(kSawBow, ctx(kSourceSaw), 0, 1, Differs());
+  // A saw held at A4 for two seconds without bow scrape: the vibrato swings as far as it is set.
+  { Context c = ctx(kSourceSaw, {{kSawBow, 0}}, 69); c.hold_s = 2.0; set(kSawVibrato, c, 5, 40, PitchSwingCents(5, 40, 2.5)); }
   // Picked at the middle so the main string's own second harmonic (a node there) stays out of the
   // octave string's way.
   set(kJangleOctave, ctx(kSourceJangle, {{kJanglePick, 1.0}}), 0, 1, ToneRises(2.0 * std::exp2(6.0 / 1200.0), 1.4));

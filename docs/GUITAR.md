@@ -122,6 +122,81 @@ What the gate cannot see: attack, decay and the octave (12-string) signature wer
 corpus but are not gated, because they depend on librosa's onset detector and pitch tracker and
 were noisy on dense mixes.
 
+## The stem gate: lo-fi 4-track and home-psych records
+
+A second corpus holds all six htdemucs_6s stems of 45-second excerpts of 14 lo-fi 4-track records
+and 12 home-recorded psychedelic records, measured by the corpus's own `scripts/features.py`.
+`tools/stem_gate_profiles.py` turns its `features_ref.json` into `tests/stem_reference.hpp`
+(quartiles and medians, numbers only), and `tests/stem_features.hpp` measures a render as that
+script measures a stem: the long-term spectrum (centroid, 85% roll-off), the 100 ms crest, the
+broadband L/R correlation, and the tape wobble, which is librosa's pYIN ported step for step
+(thresholds, Boltzmann trough prior, ten bins a semitone, Viterbi decoding) followed by the
+script's own run and detrend rules. On every gated render below the port and the script agree to
+the printed precision. `tone_gate_tests` holds each preset, measured as the stem it would be
+separated into, inside the group's plain interquartile range: centroid and roll-off for every
+stem, L/R correlation for a guitar, and wobble for a guitar and for the other stem.
+`fuzzboi-stem-gate-try "Preset" GROUP STEM PHRASE [Param=value ...] [wav=out.wav]` is the tuning
+tool.
+
+Which of the corpus's numbers can be used:
+
+- **Lo-fi guitar**: the same fourteen records as the guitar corpus's lo-fi group, and the same
+  numbers (centroid 838 against 841 Hz, roll-off 1696 against 1704 Hz). Usable.
+- **Home-psych guitar**: two populations. Seven of the twelve guitar stems have 70 to 90% of their
+  energy below 250 Hz (low share -1.1 to -1.7 dB) with roll-offs of 200 to 630 Hz: bass in the
+  guitar stem, which is why the guitar corpus leaves this group out. The other five measure like
+  guitars (centroid 660 to 1150 Hz). The median (388 Hz) is the bleed's, so the preset is fitted to
+  the upper half of the range, where the real guitars are; the wobble and correlation quartiles are
+  used as they stand.
+- **Home-psych bass**: ten of twelve stems carry a real bass (share of mix above -15 dB). Usable.
+- **Lo-fi bass and other**: near-empty on most of those records (median share of mix -46 and
+  -50 dB), so their numbers measure separation residue. Not gated.
+- **Home-psych other**: tape keys, organ, horns, saws and collage together, so its quartiles are
+  a mixture's; usable as a broad range, which is how they are used.
+
+What the wobble measure sees: pYIN reports pitch in 10-cent bins, and an equal-tempered note sits
+0.8 cents from a bin centre, so a steady note reads 0 and modulation reads only once it carries
+the pitch across bins. Each run is detrended over 21 frames (0.24 s), which takes out most of a
+0.8 Hz wow: on "4-track crunch" adding the machine's wow alone lowered the reading. Flutter (about
+9 Hz) is what it reads. A legato line that never breaks is one run, and the script does not count
+the run still open at the end. The machine's flutter is therefore what puts the presets in range,
+and `the_master_tape_machine_puts_tape_wobble_on_any_source` proves it reaches any source: the
+master tape machine sits after the room on the whole output, so the physical guitar and the organ
+both go from under 2.5 cents to over 4 when its flutter is turned to 55%.
+
+| preset | stem | centroid Hz | roll-off Hz | L/R corr. | wobble cents |
+|---|---|---|---|---|---|
+| 4-track crunch (phys) | lo-fi guitar | 871 [736, 1046] | 1776 [1418, 2316] | 0.94 [0.79, 0.98] | 5.71 [4.16, 6.59] |
+| Home-psych fuzz (phys) | home-psych guitar | 567 [302, 700] | 996 [369, 1223] | 0.57 [0.31, 0.88] | 6.15 [4.68, 7.88] |
+| Home-taped round bass (phys) | home-psych bass | 122 [98, 148] | 167 [135, 209] | | |
+| Home-psych singing saw | home-psych other | 858 [590, 1779] | 985 [962, 3090] | | 6.10 [4.81, 8.13] |
+| Home-psych tape strings | home-psych other | 742 [590, 1779] | 1120 [962, 3090] | | 5.34 [4.81, 8.13] |
+| Home-psych tape choir | home-psych other | 883 [590, 1779] | 985 [962, 3090] | | 5.24 [4.81, 8.13] |
+
+"4-track crunch" was refitted: its centroid and roll-off (681 and 1314 Hz) sat under the lo-fi
+quartiles, inside the guitar corpus's wider allowance. Its fuzz tone went from 0.65 to 0.8 and
+the 4-track got its flutter (and a little wow); it still passes the first gate, closer than before
+(shape 3.2 against 3.7 dB). The round bass is the Bass VI on old strings, fingered 220 mm from
+the bridge with the heel of the hand on the strings, into a 3 kHz deck; its 100 ms crest (6.6 dB)
+lands in the records' quartiles too (6.3 to 7.8), though it is not gated.
+
+The singing saw needed a new parameter, **Saw vibrato** (cents, default 21, the old fixed 1.2%
+rounded to a whole cent): at its old width the saw reads 21 cents, three times the records. Narrowed to 9 cents it
+reads 6.1. The measure cannot tell its vibrato and the tape apart there: the saw's scoop into
+each note reads too. A near-sine's centroid and roll-off are its pitch, so the saw and the choir
+are judged on a high air (740 to 988 Hz); their roll-off of 985 Hz is the top note, 23 Hz inside
+the range.
+
+Not fitted: **the collage**. The built-in found sound's shortwave whistle carries a designed 5 Hz,
+34-cent warble that pYIN reads as 18 to 21 cents whatever the tape does, and its whistle and crackle
+keep the centroid at 2.3 to 3.2 kHz even with the machine's bandwidth at its narrowest. No preset
+setting reaches the range; with the player's own samples it depends on the samples.
+
+Outside the records' quartiles, and not gated: the other-stem presets are narrower (L/R
+correlation 0.93 to 1.00 against 0.45 to 0.85) and steadier (100 ms crest 3.3 to 7.2 dB against 9.7
+to 10.9) than the stems, which are mixtures of several parts; "4-track crunch" has 0.6 dB less
+above 3 kHz than the lowest quartile.
+
 Eight tunings (standard, drop D, half step down, DADGAD, open G, D, E, C), a capo, and the player:
 pluck point in mm from the saddle, finger to plectrum, palm mute, string age, hand position.
 

@@ -181,9 +181,10 @@ class ThereminVoice {
 
 // --- singing saw --------------------------------------------------------------------------------------
 //
-// A bowed, bent hand saw: a pure sine with a very slow onset as the bow bites, a wide slow
-// vibrato from the player's hand, and bow noise that fades as the note settles.
-struct SawSettings { double bow = 0.4; };
+// A bowed, bent hand saw: a pure sine with a very slow onset as the bow bites, a 4.2 Hz vibrato
+// from the player's shaking hand (about 21 cents either way unless set narrower or wider), and
+// bow noise that fades as the note settles.
+struct SawSettings { double bow = 0.4, vibrato_cents = 21.0; };
 
 class SingingSawVoice {
  public:
@@ -198,7 +199,7 @@ class SingingSawVoice {
   void note_on(double hz, bool legato) { if (!legato) glide_.snap(hz); glide_.target(hz); bow_env_.trigger(400.0); }
   float next(const SawSettings& s, double target_hz) {
     glide_.target(target_hz);
-    const double hz = glide_.next() * (1.0 + 0.012 * vibrato_.next(4.2));
+    const double hz = glide_.next() * std::exp2(s.vibrato_cents / 1200.0 * vibrato_.next(4.2));
     const float tone = osc_.next(Wave::Sine, hz, rate_);
     const float scrape = bow_noise_.low(rng_.bipolar()) * static_cast<float>(s.bow * (0.03 + 0.25 * bow_env_.next()));
     return tone * 0.6f + scrape;

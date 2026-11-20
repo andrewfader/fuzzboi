@@ -14,5 +14,6 @@ this directory, and a test without a scenario is a bug in the test.
 | guitar.feature | `guitar_tests` |
 | clap_plugin.feature | `plugin_smoke`, `note_tests`, `state_tests` |
 | advertised_parameters.feature | `advertised_tests` |
+| tone_gate.feature | `tone_gate_tests` |
 | editor.feature | `ui_tests`, `frontend_tests` (Linux) |
 | samples.feature | `harvest_tests`, `state_tests` |

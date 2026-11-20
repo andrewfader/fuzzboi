@@ -163,6 +163,13 @@ target_include_directories(fuzzboi-tone-gate-try PRIVATE "${clap_SOURCE_DIR}/inc
 target_link_libraries(fuzzboi-tone-gate-try PRIVATE fuzzboi_core)
 fuzzboi_warnings(fuzzboi-tone-gate-try)
 
+# Tries a preset against a stem of the six-stem song corpus (tests/stem_gate.hpp); a tuning tool.
+add_executable(fuzzboi-stem-gate-try tools/stem_gate_try.cpp)
+target_compile_features(fuzzboi-stem-gate-try PRIVATE cxx_std_20)
+target_include_directories(fuzzboi-stem-gate-try PRIVATE "${clap_SOURCE_DIR}/include" src tests)
+target_link_libraries(fuzzboi-stem-gate-try PRIVATE fuzzboi_core)
+fuzzboi_warnings(fuzzboi-stem-gate-try)
+
 # Renders single notes of the physical guitar for tools/guitar_critic.py; a review tool, not a test.
 add_executable(fuzzboi-guitar-render tools/guitar_render.cpp)
 target_compile_features(fuzzboi-guitar-render PRIVATE cxx_std_20)

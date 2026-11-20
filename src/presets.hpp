@@ -519,10 +519,12 @@ inline const std::vector<Preset>& all() {
       // by the quality gate to where that group's separated guitar stems measure; their settings
       // were dialled in against those measurements (tools/tone_gate_fit.py).
       // A humbucker crunched through a plexi-style head, a cardioid half a metre back in a damp, cool
-      // live room, bounced to a cassette 4-track (8 kHz, a little tape drive): mono and dark.
+      // live room, bounced to a cassette 4-track (8 kHz, a little tape drive, its flutter): mono and
+      // dark, and also held to the lo-fi records' guitar stem, wobble included (tests/stem_gate.hpp).
       {"4-track crunch (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 3}, {kGuitarPickup, 1}, {kGuitarPick, 0.85}, {kGuitarPluck, 183},
-                                {kFuzz, 0.55}, {kFuzzMode, 3}, {kFuzzTone, 0.65}, {kCabinet, 0.15}, {kCabType, 1},
+                                {kFuzz, 0.55}, {kFuzzMode, 3}, {kFuzzTone, 0.8}, {kCabinet, 0.15}, {kCabType, 1},
                                 {kMachineDrive, 0.17}, {kMachineBandwidth, 8200}, {kGenerations, 1}, {kMachineHiss, 0.1},
+                                {kMachineWow, 0.1}, {kMachineFlutter, 0.55},
                                 {kRoomSize, 3}, {kRoomAbsorption, 0.16}, {kMicDistance, 0.49}, {kHumidity, 0.65}, {kTemperature, 17},
                                 {kReleaseMs, 150}, {kSustain, 0.8}, {kMicPattern, 1}, {kMasterDb, -5.3}}},
       // The same band in a real studio: a humbucker driven hard into a British stack, two unison takes,
@@ -760,6 +762,29 @@ inline const std::vector<Preset>& all() {
       {"Psych-soul fuzz (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 12}, {kGuitarPickup, 1}, {kGuitarPick, 0.86}, {kGuitarPluck, 55},
                                   {kFuzz, 1}, {kFuzzMode, 1}, {kFuzzTone, 0.4}, {kCabinet, 0.96}, {kCabType, 0}, {kRoomSize, 1}, {kRoomAbsorption, 0.3},
                                   {kMicDistance, 0.5}, {kReleaseMs, 200}, {kSustain, 0.7}, {kDoubleTrack, 0.3}, {kNoiseFloor, -53.5}, {kMasterDb, -6.5}}},
+      // --- the twelfth round: home-recorded psychedelic pop, held to the six-stem song corpus -------
+      // (tests/stem_gate.hpp). Everything goes to a home multitrack whose flutter is on every part.
+      // A semi-hollow into a dark Face fuzz flat out and a tweed, close in a booth, a second take, to a
+      // 5 kHz home deck with its wow and flutter: the dark, wide, warbling fuzz guitar.
+      {"Home-psych fuzz (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 12}, {kGuitarPickup, 1}, {kGuitarPick, 0.86}, {kGuitarPluck, 55},
+                                  {kFuzz, 1}, {kFuzzMode, 1}, {kFuzzTone, 0.4}, {kCabinet, 0.96}, {kCabType, 0}, {kRoomSize, 1}, {kRoomAbsorption, 0.3},
+                                  {kMicDistance, 0.5}, {kReleaseMs, 200}, {kSustain, 0.7}, {kDoubleTrack, 0.3}, {kNoiseFloor, -53.5},
+                                  {kMachineBandwidth, 5000}, {kMachineWow, 0.15}, {kMachineFlutter, 0.6}, {kMasterDb, -6.5}}},
+      // A six-string bass on old strings, fingered far up the neck with the heel of the hand resting on
+      // the strings, straight into a 3 kHz home deck: big, round and low.
+      {"Home-taped round bass (phys)", {{kSource, kSourceGuitar}, {kGuitarModel, 4}, {kGuitarPickup, 0}, {kGuitarPick, 0.3}, {kGuitarPluck, 220},
+                                        {kGuitarAge, 0.8}, {kGuitarMute, 0.7}, {kVelocitySens, 1.0}, {kReleaseMs, 120}, {kVerbMix, 0.05},
+                                        {kMachineBandwidth, 3000}, {kMachineWow, 0.15}, {kMachineFlutter, 0.5}, {kMasterDb, 4.2}}},
+      // A saw bowed high and held nearly straight, the hand barely shaking, into a chamber and the deck.
+      {"Home-psych singing saw", {{kSource, kSourceSaw}, {kSawBow, 0.5}, {kSawVibrato, 9}, {kVerbMix, 0.5}, {kVerbPredelay, 30}, {kAttackMs, 150},
+                                  {kReleaseMs, 400}, {kVoiceMode, 2}, {kMachineWow, 0.1}, {kMachineFlutter, 0.2}, {kMasterDb, 0}}},
+      // Tape-key strings an octave up, bounced twice and chorused, on a fluttering deck.
+      {"Home-psych tape strings", {{kSource, kSourceTape}, {kTapeBank, 1}, {kTapeWow, 0.5}, {kTapeAge, 0.5}, {kGenerations, 2}, {kVerbMix, 0.4},
+                                   {kAttackMs, 80}, {kReleaseMs, 600}, {kChorusMix, 0.3}, {kChorusMode, 3}, {kChorusRate, 0.4}, {kTranspose, 12},
+                                   {kMachineFlutter, 0.6}, {kMasterDb, -3.5}}},
+      // The tape choir through a phaser with a backwards bloom, on a fluttering deck.
+      {"Home-psych tape choir", {{kSource, kSourceTape}, {kTapeBank, 2}, {kPhaserMix, 0.4}, {kPhaserRate, 0.15}, {kBackwardsMix, 0.3}, {kBackwardsChunk, 700},
+                                 {kAttackMs, 120}, {kReleaseMs, 800}, {kVerbMix, 0.35}, {kMachineFlutter, 0.6}, {kMasterDb, -4.5}}},
   };
   return table;
 }

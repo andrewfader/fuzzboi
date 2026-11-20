@@ -1,7 +1,8 @@
 // Musical phrases for judging a preset as a record's guitar part is judged: not one note, but
 // sixteen seconds of playing in a style (strummed open chords, palm-muted power chords, ringing
 // arpeggios, a riff with stabs and a lead lick, fingerpicking, droning chords), at 120 BPM over
-// E, A, D, A.
+// E, A, D, A. For the other stems of a record: a bass line on the roots, a legato melody and
+// slow air of held notes and held chords, over the same changes.
 // A strum's strings are struck a few milliseconds apart, low to high on a downstroke and high to
 // low on an upstroke, as a pick crosses them. Used by tone_gate_tests and the preset tools.
 #pragma once
@@ -15,7 +16,7 @@
 
 namespace tone {
 
-enum class Phrase { Strum, Power, Arpeggio, Lead, Fingerpick, Drone };
+enum class Phrase { Strum, Power, Arpeggio, Lead, Fingerpick, Drone, Bassline, Melody, Air, Pad };
 
 struct Event { double time; bool on; int key; double velocity; };
 
@@ -29,6 +30,8 @@ inline const std::array<std::vector<int>, 4> kOpen{{
     {45, 52, 57, 61, 64},      // A
 }};
 inline const std::array<std::vector<int>, 4> kPower{{{40, 47, 52}, {45, 52, 57}, {50, 57, 62}, {43, 50, 55}}};
+inline constexpr std::array<int, 4> kRoot{28, 33, 38, 33};
+inline const std::array<std::vector<int>, 4> kTriad{{{52, 56, 59}, {57, 61, 64}, {54, 57, 62}, {57, 61, 64}}};
 
 // A pick stroke across `keys`: down low to high, up over the top strings high to low.
 inline void stroke(std::vector<Event>& ev, double t, const std::vector<int>& keys, double velocity, bool up, double hold) {
@@ -97,6 +100,43 @@ inline std::vector<Event> phrase_events(Phrase p, double seconds) {
       case Phrase::Drone:
         if (beat == 0) stroke(ev, t, kOpen[static_cast<size_t>(bar)], 0.8, false, 8 * kEighth - 0.02);
         else if (beat == 4) stroke(ev, t, kOpen[static_cast<size_t>(bar)], 0.55, true, 4 * kEighth - 0.02);
+        break;
+      case Phrase::Bassline: {
+        // Root, root, fifth, octave, fifth, root, fifth, root: eighths, the beats leant on.
+        static constexpr std::array<int, 8> step{0, 0, 7, 12, 7, 0, 7, 0};
+        const int key = kRoot[static_cast<size_t>(bar)] + step[static_cast<size_t>(beat)];
+        ev.push_back({t, true, key, beat % 2 == 0 ? 0.8 : 0.65});
+        ev.push_back({t + kEighth - 0.03, false, key, 0.0});
+        break;
+      }
+      case Phrase::Melody: {
+        // A bar-long phrase sung on one breath (a bow stroke): half, quarter, eighth, each note
+        // joined to the next, then an eighth's rest before the next phrase.
+        static constexpr std::array<int, 4> start{0, 4, 6, 7};
+        static constexpr std::array<std::array<int, 3>, 4> tune{{{68, 71, 69}, {69, 73, 71}, {66, 69, 74}, {73, 71, 69}}};
+        for (size_t n = 0; n < 3; ++n)
+          if (beat == start[n]) {
+            const int key = tune[static_cast<size_t>(bar)][n];
+            const double joined = n < 2 ? 0.03 : -0.02;
+            ev.push_back({t, true, key, 0.75});
+            ev.push_back({t + (start[n + 1] - start[n]) * kEighth + joined, false, key, 0.0});
+          }
+        break;
+      }
+      case Phrase::Air:
+        // One long high note a bar, the bow drawn through it and lifted for an eighth before the next.
+        if (beat == 0) {
+          static constexpr std::array<int, 4> air{80, 81, 78, 83};
+          ev.push_back({t, true, air[static_cast<size_t>(bar)], 0.75});
+          ev.push_back({t + 7 * kEighth, false, air[static_cast<size_t>(bar)], 0.0});
+        }
+        break;
+      case Phrase::Pad:
+        if (beat == 0)
+          for (int key : kTriad[static_cast<size_t>(bar)]) {
+            ev.push_back({t, true, key, 0.7});
+            ev.push_back({t + 8 * kEighth - 0.05, false, key, 0.0});
+          }
         break;
     }
   }

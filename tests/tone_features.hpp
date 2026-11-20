@@ -38,11 +38,13 @@ struct Features {
 
 namespace detail {
 
-// Power spectra of centred, reflect-padded Hann frames, as librosa.stft computes them.
-inline std::vector<std::vector<double>> stft_power(const std::vector<float>& y, int n_fft, int hop) {
+// Power spectra of centred Hann frames, as librosa.stft computes them: reflect padding (as
+// librosa before 0.10 did) or zeros (its default since).
+inline std::vector<std::vector<double>> stft_power(const std::vector<float>& y, int n_fft, int hop, bool reflect = true) {
   const int pad = n_fft / 2;
   const auto at = [&](long i) -> double {
     const long n = static_cast<long>(y.size());
+    if (!reflect) return i >= 0 && i < n ? y[static_cast<size_t>(i)] : 0.0;
     if (n == 1) return y[0];
     while (i < 0 || i >= n) { if (i < 0) i = -i; if (i >= n) i = 2 * (n - 1) - i; }
     return y[static_cast<size_t>(i)];
