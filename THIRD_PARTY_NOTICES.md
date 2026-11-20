@@ -31,7 +31,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## CLAP
 
-The CLAP headers (free-audio/clap, tag 1.2.7) are fetched at configure time. MIT License,
+The CLAP headers (free-audio/clap, tag 1.2.10) are fetched at configure time. MIT License,
 Copyright (c) 2021 Alexandre BIQUE.
 
 ## Freeverb tunings
