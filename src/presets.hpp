@@ -785,6 +785,11 @@ inline const std::vector<Preset>& all() {
       // The tape choir through a phaser with a backwards bloom, on a fluttering deck.
       {"Home-psych tape choir", {{kSource, kSourceTape}, {kTapeBank, 2}, {kPhaserMix, 0.4}, {kPhaserRate, 0.15}, {kBackwardsMix, 0.3}, {kBackwardsChunk, 700},
                                  {kAttackMs, 120}, {kReleaseMs, 800}, {kVerbMix, 0.35}, {kMachineFlutter, 0.6}, {kMasterDb, -4.5}}},
+      // Home tape cut up: two decks of found sound, one each side, chopped into long slices and
+      // sometimes run backwards, on the fluttering home deck.
+      {"Home-psych tape collage", {{kSource, kSourceCollage}, {kFoundSounds, 1}, {kCollageSlice, 900}, {kCollageChance, 0.5}, {kCollageReverse, 0.3},
+                                   {kCollageScatter, 1}, {kUnison, 2}, {kStereoSpread, 0.8}, {kMachineBandwidth, 4300}, {kMachineHiss, 0.003}, {kMachineWow, 0.2},
+                                   {kMachineFlutter, 0.5}, {kReleaseMs, 300}, {kMasterDb, 3.8}}},
   };
   return table;
 }

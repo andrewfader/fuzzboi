@@ -67,6 +67,7 @@ SCENARIO(each_records_preset_sounds_like_the_records) {
 SCENARIO(each_stem_preset_lands_in_its_groups_quartiles) {
   GIVEN("each preset written for the lo-fi or home-psych records' guitar, bass or other stem, playing sixteen seconds of its part at 120 BPM");
   THEN("measured as that stem, its centroid and roll-off (and a guitar's L/R correlation, and a guitar's or other stem's tape wobble in cents) lie inside the group's interquartile range");
+  THEN("and a tape collage's centroid, roll-off, flatness, crest, L/R correlation and wobble lie inside the range of the records' collage passages");
   for (const stem_gate::Case& c : stem_gate::cases()) {
     if (g_filter && !std::strstr(c.preset, g_filter)) continue;
     const long index = preset_index(c.preset);
@@ -79,10 +80,10 @@ SCENARIO(each_stem_preset_lands_in_its_groups_quartiles) {
     const auto audio = stem_gate::render_case(s, c.phrase);
     const stem::Features f = stem::measure(audio.left, audio.right, kRate);
     const std::string failures = stem_gate::judge(f, *ref);
-    std::printf("    %-30s %-8s %-6s cent %5.0f [%4.0f..%4.0f] roll %5.0f [%4.0f..%4.0f] corr %.2f [%.2f..%.2f] wobble %5.2f [%.2f..%.2f] %s\n",
-                c.preset, c.group, c.stem, f.centroid_hz, ref->centroid_hz.q25, ref->centroid_hz.q75, f.rolloff85_hz, ref->rolloff85_hz.q25,
-                ref->rolloff85_hz.q75, f.corr, ref->corr.q25, ref->corr.q75, f.wobble_cents, ref->wobble_cents.q25, ref->wobble_cents.q75,
-                failures.empty() ? "ok" : "FAIL");
+    std::printf("    %-30s %-11s %-6s cent %5.0f [%4.0f..%4.0f] roll %5.0f [%4.0f..%4.0f] flat %6.1f [%.1f..%.1f] crest %4.1f [%.1f..%.1f] corr %.2f [%.2f..%.2f] wobble %5.2f [%.2f..%.2f] %s\n",
+                c.preset, c.group, c.stem, f.centroid_hz, ref->centroid_hz.lo, ref->centroid_hz.hi, f.rolloff85_hz, ref->rolloff85_hz.lo,
+                ref->rolloff85_hz.hi, f.flatness_db, ref->flatness_db.lo, ref->flatness_db.hi, f.crest100_db, ref->crest100_db.lo, ref->crest100_db.hi,
+                f.corr, ref->corr.lo, ref->corr.hi, f.wobble_cents, ref->wobble_cents.lo, ref->wobble_cents.hi, failures.empty() ? "ok" : "FAIL");
     CHECK(failures.empty(), std::string(c.preset) + ": " + failures);
   }
 }
@@ -105,6 +106,26 @@ SCENARIO(the_master_tape_machine_puts_tape_wobble_on_any_source) {
     CHECK(still < 2.5, spec::fmt("wobble without the machine's flutter %.2f cents", still));
     CHECK(wobble > 4.0 && wobble - still > 2.5, spec::fmt("wobble with it %.2f cents (without %.2f)", wobble, still));
   }
+}
+
+SCENARIO(the_home_tape_found_sounds_waver_as_a_cassette_does) {
+  GIVEN("\"Home-psych tape collage\" holding one long note a bar, with the master tape machine's wow and flutter off");
+  auto s = fuzzboi::Settings::defaults();
+  fuzzboi::presets::apply(static_cast<size_t>(preset_index("Home-psych tape collage")), s.v.data());
+  s.v[fuzzboi::params::kMachineWow] = 0.0;
+  s.v[fuzzboi::params::kMachineFlutter] = 0.0;
+  const stem::Reference* collage = stem_gate::reference("OTC_collage", "other");
+  const auto wobble = [&](int bank) {
+    s.v[fuzzboi::params::kFoundSounds] = bank;
+    const auto audio = stem_gate::render_case(s, tone::Phrase::Air);
+    return stem::measure(audio.left, audio.right, kRate).wobble_cents;
+  };
+  WHEN("the empty slots play the shortwave found sounds, then the home-tape ones");
+  const double shortwave = wobble(0), home = wobble(1);
+  THEN("the shortwave whistle's warble reads over 12 cents, and the home tape's own wow and flutter inside the records' collage range");
+  CHECK(shortwave > 12.0, spec::fmt("shortwave wobble %.2f cents", shortwave));
+  CHECK(home >= collage->wobble_cents.lo && home <= collage->wobble_cents.hi,
+        spec::fmt("home tape wobble %.2f cents, records' collage %.2f..%.2f", home, collage->wobble_cents.lo, collage->wobble_cents.hi));
 }
 
 int main(int argc, char** argv) {

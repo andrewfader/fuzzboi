@@ -38,10 +38,10 @@ int main(int argc, char** argv) {
   if (wav && !fuzzboi::wav::write_file(wav, {audio.left, audio.right}, tone_gate::kRate)) { std::perror(wav); return 1; }
   const stem::Features f = stem::measure(audio.left, audio.right, tone_gate::kRate);
   const std::string failures = judge(f, *ref);
-  std::printf("%s as %s %s: cent %.0f [%.0f..%.0f] roll %.0f [%.0f..%.0f] hf %.1f low %.1f crest %.1f corr %.2f [%.2f..%.2f] wobble %.2f [%.2f..%.2f] (%d runs)\n",
-              argv[1], ref->group, ref->stem, f.centroid_hz, ref->centroid_hz.q25, ref->centroid_hz.q75, f.rolloff85_hz, ref->rolloff85_hz.q25,
-              ref->rolloff85_hz.q75, f.hf_share_db, f.low_share_db, f.crest100_db, f.corr, ref->corr.q25, ref->corr.q75, f.wobble_cents,
-              ref->wobble_cents.q25, ref->wobble_cents.q75, f.wobble_runs);
+  std::printf("%s as %s %s: cent %.0f [%.0f..%.0f] roll %.0f [%.0f..%.0f] hf %.1f low %.1f flat %.1f [%.1f..%.1f] crest %.2f [%.2f..%.2f] corr %.2f [%.2f..%.2f] wobble %.2f [%.2f..%.2f] (%d runs)\n",
+              argv[1], ref->group, ref->stem, f.centroid_hz, ref->centroid_hz.lo, ref->centroid_hz.hi, f.rolloff85_hz, ref->rolloff85_hz.lo,
+              ref->rolloff85_hz.hi, f.hf_share_db, f.low_share_db, f.flatness_db, ref->flatness_db.lo, ref->flatness_db.hi, f.crest100_db, ref->crest100_db.lo, ref->crest100_db.hi, f.corr, ref->corr.lo, ref->corr.hi, f.wobble_cents,
+              ref->wobble_cents.lo, ref->wobble_cents.hi, f.wobble_runs);
   std::printf("  %s\nLOSS %.4f\n", failures.empty() ? "PASS" : failures.c_str(), loss(f, *ref));
   return failures.empty() ? 0 : 1;
 }

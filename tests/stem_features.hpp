@@ -4,7 +4,9 @@
 //
 //   spectral: the long-term power spectrum (STFT n_fft 8192, hop 2048, Hann, centred frames
 //             with zero padding) averaged over frames within 40 dB of the loudest: centroid and
-//             85% roll-off from 20 Hz, share above 3 kHz and below 250 Hz.
+//             85% roll-off from 20 Hz, share above 3 kHz and below 250 Hz; and over the same
+//             frames the median spectral flatness (librosa's, on the magnitude plus 1e-10
+//             squared and floored at 1e-10, every bin), 20 log10 as the script takes it.
 //   crest:    the median over non-overlapping 100 ms blocks (RMS within 20 dB of the loudest)
 //             of peak over RMS, dB.
 //   stereo:   the broadband zero-lag correlation of left and right.
@@ -27,7 +29,7 @@ namespace stem {
 
 struct Features {
   double centroid_hz = 0.0, rolloff85_hz = 0.0, hf_share_db = 0.0, low_share_db = 0.0;
-  double crest100_db = 0.0, corr = 1.0, wobble_cents = 0.0;
+  double flatness_db = 0.0, crest100_db = 0.0, corr = 1.0, wobble_cents = 0.0;
   int wobble_runs = 0;
 };
 
@@ -233,7 +235,19 @@ inline Features measure(const std::vector<float>& left, const std::vector<float>
     std::vector<double> e(S.size());
     for (size_t t = 0; t < S.size(); ++t) { for (double v : S[t]) e[t] += v; emax = std::max(emax, e[t]); }
     std::vector<double> P(S.empty() ? 0 : S[0].size(), 0.0);
-    for (size_t t = 0; t < S.size(); ++t) if (e[t] > emax * 1e-4) for (size_t k = 0; k < P.size(); ++k) P[k] += S[t][k];
+    std::vector<double> flat;
+    for (size_t t = 0; t < S.size(); ++t) {
+      if (e[t] <= emax * 1e-4) continue;
+      double logsum = 0.0, power = 0.0;
+      for (size_t k = 0; k < P.size(); ++k) {
+        P[k] += S[t][k];
+        const double m = std::sqrt(S[t][k]) + 1e-10, p = std::max(m * m, 1e-10);
+        logsum += std::log(p); power += p;
+      }
+      const double bins = static_cast<double>(P.size());
+      flat.push_back(20.0 * std::log10(std::exp(logsum / bins) / (power / bins) + 1e-12));
+    }
+    f.flatness_db = tone::detail::median(flat);
     const auto hz = [&](size_t k) { return static_cast<double>(k) * rate / n_fft; };
     double sum = 0.0, weighted = 0.0, high = 0.0, low = 0.0;
     for (size_t k = 0; k < P.size(); ++k) {

@@ -84,6 +84,8 @@ enum ParamId : uint32_t {
   kMicSetup,
   // --- appended in the twelfth round: how wide the singing saw's vibrato swings ---------------------
   kSawVibrato,
+  // --- appended in the thirteenth round: which built-in found sounds an empty collage slot plays ----
+  kFoundSounds,
   kParamCount
 };
 
@@ -150,7 +152,9 @@ constexpr const char* kRoomSizeNames[kRoomSizeCount] = {"Off", "Booth", "Bedroom
 constexpr std::array<double, kRoomSizeCount> kRoomVolumes{0.0, 10.0, 35.0, 150.0, 600.0, 3000.0, 12000.0};
 constexpr const char* kMicPatternNames[] = {"Omni", "Cardioid", "Figure-8"};
 constexpr const char* kMicSetupNames[] = {"Stereo pair", "Mono"};
-constexpr int kPresetCount = 173;  // The names live in presets.hpp; the table only needs the size.
+constexpr int kFoundSoundCount = 2;
+constexpr const char* kFoundSoundNames[kFoundSoundCount] = {"Shortwave", "Home tape"};
+constexpr int kPresetCount = 174;  // The names live in presets.hpp; the table only needs the size.
 
 constexpr std::array<ParamSpec, kParamCount> kSpecs{{
     // voice
@@ -341,6 +345,7 @@ constexpr std::array<ParamSpec, kParamCount> kSpecs{{
     {"Wah auto", "Pedals/Wah", 0, 1, 0, false, Unit::Percent, nullptr},
     {"Mic setup", "Room", 0, 1, 0, true, Unit::Options, kMicSetupNames},
     {"Saw vibrato", "Toys/Saw", 0, 50, 21, false, Unit::Cents, nullptr},
+    {"Found sounds", "Collage", 0, kFoundSoundCount - 1, 0, true, Unit::Options, kFoundSoundNames},
 }};
 
 // The preset parameter's value names come from the preset table, which lives above this header

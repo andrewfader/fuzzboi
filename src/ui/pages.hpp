@@ -42,6 +42,7 @@ inline std::vector<PageSpec> fuzzboi_pages() {
        {{"Tape keys", 0, {menu(kTapeBank, 3), knob(kTapeLength), knob(kVarispeed)}},
         {"Tape path", 0, {knob(kTapeWow), knob(kTapeFlutter), knob(kTapeHiss), knob(kTapeAge)}},
         {"Collage sampler", 1, {knob(kSampleRoot), toggle(kSampleLoop), knob(kCollageSlice), knob(kCollageChance), knob(kCollageReverse), knob(kCollageScatter)}},
+        {"Found sounds", 2, {segments(kFoundSounds, 2)}},
         {"Optigan", 2, {knob(kOptigan)}}}},
       {"TOYS", "The toy cupboard: toy piano, music box, electric jug, theremin, saw, piccolo and the jangle", theme::violet, 3, 0,
        {{"Toy piano and music box", 0, {knob(kToyHammer), knob(kToyDamp), knob(kToyInharmonic)}},
@@ -138,6 +139,7 @@ inline const char* fuzzboi_short_name(int id) {
     case kCollageChance: return "Jump";
     case kCollageReverse: return "Reverse";
     case kCollageScatter: return "Scatter";
+    case kFoundSounds: return "Found";
     case kToyHammer: return "Hammer";
     case kToyDamp: return "Damping";
     case kToyInharmonic: return "Inharmonic";

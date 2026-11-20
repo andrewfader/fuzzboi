@@ -868,10 +868,10 @@ class Engine {
       const int root = static_cast<int>(s[params::kSampleRoot]);
       const int slot = ((key - root) % kSampleSlots + kSampleSlots) % kSampleSlots;
       start.sample = slots_[static_cast<size_t>(slot)].load();
-      if (!start.sample) start.sample = found_[static_cast<size_t>(slot)];
+      if (!start.sample) start.sample = found_[found_bank(s)][static_cast<size_t>(slot)];
     } else if (source == params::kSourceTape && static_cast<int>(s[params::kTapeBank]) == 3) {
       start.sample = slots_[0].load();
-      if (!start.sample) start.sample = found_[0];
+      if (!start.sample) start.sample = found_[found_bank(s)][0];
     }
     if (source == params::kSourceFm) {
       if (legato && v.active() && v.fm_channel() >= 0) {
@@ -929,16 +929,22 @@ class Engine {
     take_[static_cast<size_t>(take_count_++)] = {clock_ + take_delay_[n], on, note, velocity, seed ^ 0x51ed270bu};
   }
 
+  using FoundSounds = std::array<std::array<std::shared_ptr<const dsp::Sample>, kSampleSlots>, params::kFoundSoundCount>;
+  static size_t found_bank(const Settings& s) { return static_cast<size_t>(std::clamp(static_cast<int>(s[params::kFoundSounds]), 0, params::kFoundSoundCount - 1)); }
   // The built-in found sounds are deterministic, so one set per sample rate serves every
   // instance in the process; prepare() runs on the main thread, where a lock is fine.
-  static std::array<std::shared_ptr<const dsp::Sample>, kSampleSlots> found_sounds(double rate) {
+  static FoundSounds found_sounds(double rate) {
     static std::mutex mutex;
-    static std::map<double, std::array<std::shared_ptr<const dsp::Sample>, kSampleSlots>> cache;
+    static std::map<double, FoundSounds> cache;
     std::lock_guard<std::mutex> lock(mutex);
     auto it = cache.find(rate);
     if (it != cache.end()) return it->second;
-    std::array<std::shared_ptr<const dsp::Sample>, kSampleSlots> set;
-    for (int i = 0; i < kSampleSlots; ++i) set[static_cast<size_t>(i)] = dsp::generate_found_sound(0x1000u + static_cast<uint32_t>(i) * 7919u, rate, 3.0);
+    FoundSounds set;
+    for (int i = 0; i < kSampleSlots; ++i) {
+      const uint32_t seed = 0x1000u + static_cast<uint32_t>(i) * 7919u;
+      set[0][static_cast<size_t>(i)] = dsp::generate_found_sound(seed, rate, 3.0);
+      set[1][static_cast<size_t>(i)] = dsp::generate_home_tape_sound(seed, rate, 3.0);
+    }
     cache[rate] = set;
     return set;
   }
@@ -949,7 +955,7 @@ class Engine {
   dsp::FmControls last_fm_{};
   std::array<bool, dsp::FmChip::kChannels> fm_in_use_{};
   std::array<AtomicSharedPtr<const dsp::Sample>, kSampleSlots> slots_{};
-  std::array<std::shared_ptr<const dsp::Sample>, kSampleSlots> found_{};
+  FoundSounds found_{};
   std::array<dsp::Fuzz, 2> fuzz_{};
   std::array<dsp::Wah, 2> wah_{};
   std::array<dsp::Cabinet, 2> cabinet_{};

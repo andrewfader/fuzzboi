@@ -374,6 +374,7 @@ std::array<Proof, P::kParamCount> proofs() {
   set(kCollageReverse, ctx(kSourceCollage, {{kCollageSlice, 100}}), 0, 1, Differs());
   set(kCollageScatter, ctx(kSourceCollage), 0, 1, Differs());
   set(kOptigan, ctx(kSourceCollage), 0, 1, Differs());
+  set(kFoundSounds, ctx(kSourceCollage), 0, 1, Differs());
   // toys
   set(kToyHammer, ctx(kSourceToyPiano), 0, 1, Brighter(1.1));
   set(kToyDamp, ctx(kSourceToyPiano), 0, 1, ShorterTail());

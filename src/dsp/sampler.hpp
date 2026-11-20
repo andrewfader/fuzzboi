@@ -1,11 +1,12 @@
 // The sample side of the instrument: a sample (mono frames plus root pitch and loop), the
 // voice that plays one with varispeed and loops, the collage behaviour that chops it into
-// re-ordered, sometimes reversed slices, the Optigan character, and a found-sound generator
-// that gives an empty slot something to play.
+// re-ordered, sometimes reversed slices, the Optigan character, and two found-sound generators
+// that give an empty slot something to play.
 #pragma once
 
 #include <cmath>
 #include <cstdint>
+#include <array>
 #include <memory>
 #include <string>
 #include <vector>
@@ -153,6 +154,74 @@ inline std::shared_ptr<Sample> generate_found_sound(uint32_t seed, double rate, 
     // with either (tests/engine_tests.cpp every_preset_meets_the_quality_bar).
     sample->frames[i] = static_cast<float>(x * (1.0 - stop) * 0.75);
   }
+  return sample;
+}
+
+// A few seconds of what a home tape collage is cut from, for the collage sampler when no sample
+// is loaded: a cassette's hiss and the room it was made in, a reedy chord played into the deck
+// and wavering with that deck's wow and flutter, two people talking in the next room, a glass
+// clinked now and then. No whistle and no crackle. Deterministic for a given seed; each seed
+// plays its own chord and voices.
+inline std::shared_ptr<Sample> generate_home_tape_sound(uint32_t seed, double rate, double seconds = 4.0) {
+  auto sample = std::make_shared<Sample>();
+  sample->rate = rate;
+  sample->root_hz = 261.63;
+  sample->name = "Home tape (built in)";
+  sample->source = "synthesized";
+  sample->license = "none needed";
+  const size_t n = static_cast<size_t>(rate * seconds);
+  sample->frames.assign(n, 0.0f);
+  Rng rng(seed);
+  static constexpr std::array<double, 6> kRoots{196.0, 220.0, 246.9, 261.6, 293.7, 329.6};
+  const double root = kRoots[rng.next() % kRoots.size()];
+  const std::array<double, 3> chord{root, root * (rng.unipolar() < 0.5f ? 1.2599 : 1.1892), root * 1.4983};
+  const double wow_phase = kTau * rng.unipolar(), voice_hz = 105.0 + 90.0 * rng.unipolar();
+  std::array<double, 3> phase{};
+  double voice_phase = 0.0, syllable_left = 0.0, syllable_gain = 0.0, clink_left = 0.4 * rate;
+  StateVariable formant; formant.prepare(rate);
+  Biquad wall_low, wall_high, hiss_low, hiss_high, reed_low;
+  wall_low.set(Biquad::Type::LowPass, 2800.0, 0.7, 0.0, rate);
+  wall_high.set(Biquad::Type::HighPass, 350.0, 0.7, 0.0, rate);
+  hiss_low.set(Biquad::Type::LowPass, 6000.0, 0.7, 0.0, rate);
+  hiss_high.set(Biquad::Type::HighPass, 2000.0, 0.7, 0.0, rate);
+  reed_low.set(Biquad::Type::LowPass, 2500.0, 0.7, 0.0, rate);
+  std::array<StateVariable, 3> glass{};
+  static constexpr std::array<double, 3> kGlassHz{2350.0, 3720.0, 5480.0};
+  for (size_t m = 0; m < glass.size(); ++m) { glass[m].prepare(rate); glass[m].set(kGlassHz[m], 180.0); }
+  std::vector<double> x(n);
+  for (size_t i = 0; i < n; ++i) {
+    const double t = static_cast<double>(i) / rate;
+    double v = hiss_low.process(hiss_high.process(rng.bipolar())) * 0.3;
+    // The chord off the deck: 0.6 Hz wow of 6 cents and 7 Hz flutter of 3, swelling in and out.
+    const double speed = std::exp2((6.0 * std::sin(kTau * 0.6 * t + wow_phase) + 3.0 * std::sin(kTau * 7.0 * t)) / 1200.0);
+    double reed = 0.0;
+    for (size_t k = 0; k < chord.size(); ++k) {
+      phase[k] += chord[k] * speed / rate;
+      phase[k] -= std::floor(phase[k]);
+      reed += 2.0 * phase[k] - 1.0;
+    }
+    v += reed_low.process(static_cast<float>(reed)) * 0.08 * (0.55 + 0.45 * std::sin(kTau * 0.31 * t + wow_phase));
+    // Talk in the next room: syllables of random length and loudness, through the wall.
+    if ((syllable_left -= 1.0) <= 0.0) {
+      syllable_left = (0.08 + 0.22 * rng.unipolar()) * rate;
+      syllable_gain = rng.unipolar() < 0.3f ? 0.0 : 0.5 + 0.5 * rng.unipolar();
+    }
+    voice_phase += voice_hz * (1.0 + 0.12 * std::sin(kTau * 0.9 * t + 2.0 * wow_phase)) / rate;
+    voice_phase -= std::floor(voice_phase);
+    formant.set(500.0 + 900.0 * (0.5 + 0.5 * std::sin(kTau * 3.7 * t)), 5.0);
+    const float buzz = voice_phase < 0.12 ? 1.0f : -0.14f;
+    v += wall_low.process(wall_high.process(formant.band(buzz))) * 0.25 * syllable_gain;
+    // A glass clinked every second or so.
+    float strike = 0.0f;
+    if ((clink_left -= 1.0) <= 0.0) { clink_left = (0.6 + 1.2 * rng.unipolar()) * rate; strike = 0.5f + 0.5f * rng.unipolar(); }
+    for (auto& g : glass) v += g.ring(strike) * 0.02;
+    x[i] = v;
+  }
+  // Brought to the -23 dBFS RMS the harvested bank and the shortwave sounds hold.
+  double sum = 0.0;
+  for (double v : x) sum += v * v;
+  const double gain = 0.0708 / std::sqrt(std::max(sum / static_cast<double>(n), 1e-20));
+  for (size_t i = 0; i < n; ++i) sample->frames[i] = static_cast<float>(x[i] * gain);
   return sample;
 }
 

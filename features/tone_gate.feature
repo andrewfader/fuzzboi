@@ -21,6 +21,9 @@ Feature: Physical presets sound like the records they were written for
   interquartile range. Not gated: the lo-fi group's bass and other stems (near-empty on most of
   those records), share of mix (a mixing decision, not a sound), and the bass stem's wobble (pYIN
   starts at 65 Hz, so a bass line's low notes pin to its floor and read as no wobble at all).
+  Three of the home-psych excerpts' other stems are tape collage, not an instrument (spectral
+  flatness -73 to -71 dB, where the instruments' other stems measure -92 to -135); a collage
+  preset answers to the range of those three, on every measure that tells noise-like material apart.
 
   Executable: tests/tone_gate_tests.cpp (CTest tone_gate_tests).
 
@@ -37,9 +40,17 @@ Feature: Physical presets sound like the records they were written for
     Then its centroid and 85% roll-off lie inside the group's interquartile range
     And a guitar's L/R correlation does too
     And a guitar's or other stem's tape wobble, in cents, does too
+    And a tape collage's centroid, roll-off, spectral flatness, 100 ms crest, L/R correlation and wobble lie inside the range of the records' collage passages
 
   # the_master_tape_machine_puts_tape_wobble_on_any_source
   Scenario: The master tape machine puts tape wobble on any source
     Given a physical guitar playing droned chords, and a combo organ holding chords, with the master tape machine's wow and flutter off
     When the machine's flutter is turned to 55%
     Then the measured wobble rises from under 2.5 cents to over 4 cents, by more than 2.5
+
+  # the_home_tape_found_sounds_waver_as_a_cassette_does
+  Scenario: The home-tape found sounds waver as a cassette does
+    Given "Home-psych tape collage" holding one long note a bar, with the master tape machine's wow and flutter off
+    When the empty slots play the shortwave found sounds, then the home-tape ones
+    Then the shortwave whistle's warble reads over 12 cents of wobble
+    And the home tape's own wow and flutter reads inside the range of the records' collage passages

@@ -128,13 +128,14 @@ A second corpus holds all six htdemucs_6s stems of 45-second excerpts of 14 lo-f
 and 12 home-recorded psychedelic records, measured by the corpus's own `scripts/features.py`.
 `tools/stem_gate_profiles.py` turns its `features_ref.json` into `tests/stem_reference.hpp`
 (quartiles and medians, numbers only), and `tests/stem_features.hpp` measures a render as that
-script measures a stem: the long-term spectrum (centroid, 85% roll-off), the 100 ms crest, the
-broadband L/R correlation, and the tape wobble, which is librosa's pYIN ported step for step
+script measures a stem: the long-term spectrum (centroid, 85% roll-off, spectral flatness), the
+100 ms crest, the broadband L/R correlation, and the tape wobble, which is librosa's pYIN ported step for step
 (thresholds, Boltzmann trough prior, ten bins a semitone, Viterbi decoding) followed by the
 script's own run and detrend rules. On every gated render below the port and the script agree to
 the printed precision. `tone_gate_tests` holds each preset, measured as the stem it would be
 separated into, inside the group's plain interquartile range: centroid and roll-off for every
-stem, L/R correlation for a guitar, and wobble for a guitar and for the other stem.
+stem, L/R correlation for a guitar, and wobble for a guitar and for the other stem; a tape collage
+on all six (below).
 `fuzzboi-stem-gate-try "Preset" GROUP STEM PHRASE [Param=value ...] [wav=out.wav]` is the tuning
 tool.
 
@@ -172,6 +173,7 @@ both go from under 2.5 cents to over 4 when its flutter is turned to 55%.
 | Home-psych singing saw | home-psych other | 858 [590, 1779] | 985 [962, 3090] | | 6.10 [4.81, 8.13] |
 | Home-psych tape strings | home-psych other | 742 [590, 1779] | 1120 [962, 3090] | | 5.34 [4.81, 8.13] |
 | Home-psych tape choir | home-psych other | 883 [590, 1779] | 985 [962, 3090] | | 5.24 [4.81, 8.13] |
+| Home-psych tape collage | home-psych collage | 1697 [1532, 2750] | 3585 [2525, 5351] | 0.29 [0.03, 0.54] | 7.06 [3.76, 9.32] |
 
 "4-track crunch" was refitted: its centroid and roll-off (681 and 1314 Hz) sat under the lo-fi
 quartiles, inside the guitar corpus's wider allowance. Its fuzz tone went from 0.65 to 0.8 and
@@ -187,15 +189,71 @@ each note reads too. A near-sine's centroid and roll-off are its pitch, so the s
 are judged on a high air (740 to 988 Hz); their roll-off of 985 Hz is the top note, 23 Hz inside
 the range.
 
-Not fitted: **the collage**. The built-in found sound's shortwave whistle carries a designed 5 Hz,
-34-cent warble that pYIN reads as 18 to 21 cents whatever the tape does, and its whistle and crackle
-keep the centroid at 2.3 to 3.2 kHz even with the machine's bandwidth at its narrowest. No preset
-setting reaches the range; with the player's own samples it depends on the samples.
-
 Outside the records' quartiles, and not gated: the other-stem presets are narrower (L/R
 correlation 0.93 to 1.00 against 0.45 to 0.85) and steadier (100 ms crest 3.3 to 7.2 dB against 9.7
 to 10.9) than the stems, which are mixtures of several parts; "4-track crunch" has 0.6 dB less
 above 3 kHz than the lowest quartile.
+
+### The tape collage
+
+Three of the twelve home-psych excerpts' other stems are tape collage rather than an instrument.
+Spectral flatness separates them: -73.3 to -71.4 dB, where the other nine run from -92 to -135 dB,
+except one (-49 dB) whose other stem sits 43 dB under its mix, residue rather than a part. The
+three are also the brightest (share above 3 kHz -4.3 to -8.7 dB against -10 to -56) and among the
+widest (L/R correlation 0.03 to 0.54). Three tracks have no quartiles worth the name, so the
+generator gives that group (`OTC_collage`) its smallest and largest value, and a collage is held
+inside them on centroid, roll-off, flatness, 100 ms crest, L/R correlation and wobble.
+
+The collage sampler's built-in found sound could not get there: its shortwave whistle carries a
+designed 5 Hz, 34-cent warble that pYIN reads as 14 to 20 cents with the machine's wow and flutter
+off, and with the narrowest bandwidth its whistle and crackle sit 2.9 to 3.3 kHz with a 100%
+correlated (mono) image. The cause is the material, so a second built-in bank was added rather
+than the first changed: **Found sounds** (Shortwave, Home tape) picks what an empty slot plays.
+Home tape is what a home collage is cut from: a cassette's hiss and the room (2 to 6 kHz), a reedy
+chord played into the deck with that deck's wow (0.6 Hz, 6 cents) and flutter (7 Hz, 3 cents),
+talk through a wall, a glass clinked now and then; each slot a different chord and voice, held
+at the shortwave bank's -23 dBFS RMS. Shortwave stays the default, so every existing preset plays
+exactly as before. `the_home_tape_found_sounds_waver_as_a_cassette_does` holds the difference:
+with the master machine's wow and flutter off, the shortwave bank reads over 12 cents, the home
+tape inside the records' collage range.
+
+"Home-psych tape collage" plays it with unison 2 at 80% spread, so each side starts its own deck
+at a random place (two decks, one each side: the width), 900 ms slices that jump half the time
+and reverse a third, on a 4.3 kHz home deck with its wow and flutter. It is judged on the pad
+(three slots at once, a bar each):
+
+| measure | Home-psych tape collage | records' collage passages [min, max] | all home-psych other stems [quartiles] |
+|---|---|---|---|
+| centroid Hz | 1697 | 2519 [1532, 2750] | 986 [590, 1779] |
+| roll-off Hz | 3585 | 4592 [2525, 5351] | 1486 [962, 3090] |
+| flatness dB | -72.6 | -71.9 [-73.3, -71.4] | -94.2 [-102.2, -73.0] |
+| 100 ms crest dB | 10.88 | 11.00 [10.82, 11.09] | 10.16 [9.64, 10.86] |
+| L/R correlation | 0.29 | 0.43 [0.03, 0.54] | 0.69 [0.45, 0.85] |
+| wobble cents | 7.06 | 7.91 [3.76, 9.32] | 6.75 [4.81, 8.13] |
+
+Against the whole home-psych other stem it is inside on centroid and wobble; its roll-off,
+flatness, crest and correlation sit where the collage passages do, beyond the quartiles of a stem
+that is mostly organ, keys, horns and saws. The crest range is 0.27 dB wide and the preset sits
+0.06 dB inside its floor.
+
+How far the wobble is meaningful here: the records' collage stems are pitched 57 to 70% of the
+time (pYIN's voiced share), so their wobble is the pitched fragments in the collage, not the
+noise; the preset's reading (seven runs) is likewise its chord, and the noise between contributes
+no runs. A collage of slices under a third of a second would give no runs at all, which is why the
+slices are long.
+
+What the flatness sees: a median over frames of the geometric over the arithmetic mean of every
+bin's power, so it is decided by how far the top of the spectrum falls below the rest, which a
+clean render can take further than any recording. Rendered as floating point with no floor at all
+the preset read 2 dB lower than the same render bounced to 16 bits, more than the records' 1.9 dB
+range. A trace of the deck's hiss (0.3%, -90 dBFS) sets the floor instead, and the two now agree
+within 0.7 dB (-72.6 and -72.0), both inside. Held one key at a time (the air phrase) the same
+preset reads -70.4 dB, a decibel flatter than the range, with everything else inside: the fit is
+for layered slots, as a collage is played.
+
+"Found sound collage" is unchanged: on the same pad and judged against the same passages it reads
+3272 Hz, 4177 Hz, -51.0 dB, 10.0 dB, 1.00 and 5.6 cents (on the air, 16.9 cents), the shortwave
+bank's sound, which it was written for.
 
 Eight tunings (standard, drop D, half step down, DADGAD, open G, D, E, C), a capo, and the player:
 pluck point in mm from the saddle, finger to plectrum, palm mute, string age, hand position.

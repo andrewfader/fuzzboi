@@ -29,7 +29,7 @@ bool gui_param_relevant(const Plugin* p, clap_id id) {
   }
   if (id >= kFmPatch && id <= kFmDetune) return source == kSourceFm;
   if (id >= kTapeBank && id <= kVarispeed) return source == kSourceTape;
-  if (id == kSampleRoot) return source == kSourceCollage || (source == kSourceTape && static_cast<int>(value(kTapeBank)) == 3);
+  if (id == kSampleRoot || id == kFoundSounds) return source == kSourceCollage || (source == kSourceTape && static_cast<int>(value(kTapeBank)) == 3);
   if (id >= kSampleLoop && id <= kOptigan) return source == kSourceCollage;
   if (id >= kToyHammer && id <= kToyInharmonic) return source == kSourceToyPiano || source == kSourceMusicBox;
   if (id >= kJugResonance && id <= kJugGrowl) return source == kSourceJug;
@@ -129,6 +129,7 @@ const char* gui_help(clap_id id) {
     case kCollageReverse: return "Probability that a slice plays backwards.";
     case kCollageScatter: return "Starts each note at a random point, up to this far into the sample.";
     case kOptigan: return "Optical-disc character: narrow bandwidth, grain, lamp hum and disc wow.";
+    case kFoundSounds: return "What an empty slot plays: shortwave whistles, crackle and murmur, or home tape (hiss, a wavering chord, talk, a clinked glass).";
     case kToyHammer: return "Hard or soft hammer: more energy in the upper partials and the clank.";
     case kToyDamp: return "How quickly the tines stop ringing.";
     case kToyInharmonic: return "From harmonic partials toward the true clamped-bar ratios of a toy piano.";

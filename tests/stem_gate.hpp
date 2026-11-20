@@ -27,6 +27,7 @@ const std::vector<Case>& cases() {
       {"Home-psych singing saw", "OTC", "other", Phrase::Air},
       {"Home-psych tape strings", "OTC", "other", Phrase::Pad},
       {"Home-psych tape choir", "OTC", "other", Phrase::Air},
+      {"Home-psych tape collage", "OTC_collage", "other", Phrase::Pad},
   };
   return c;
 }
@@ -37,13 +38,16 @@ const stem::Reference* reference(const char* group, const char* stem_name) {
 }
 
 // What each stem is judged by: a guitar by its brightness, its width and its wobble; a bass by
-// how low and round it is; the other stem (saws, tape keys, collage, organ) by its brightness and
-// its wobble.
+// how low and round it is; the other stem (saws, tape keys, organ) by its brightness and its
+// wobble; a tape collage by everything that tells noise-like material apart: brightness, flatness,
+// crest, width, and the wobble of the pitched fragments in it.
 struct Measure { const char* name; double stem::Features::*value; stem::Stat stem::Reference::*stat; };
-inline std::vector<Measure> measures(const char* stem_name) {
+inline std::vector<Measure> measures(const char* group, const char* stem_name) {
   using F = stem::Features; using R = stem::Reference;
   const Measure centroid{"centroid Hz", &F::centroid_hz, &R::centroid_hz}, rolloff{"roll-off Hz", &F::rolloff85_hz, &R::rolloff85_hz};
   const Measure corr{"L/R correlation", &F::corr, &R::corr}, wobble{"wobble cents", &F::wobble_cents, &R::wobble_cents};
+  const Measure flatness{"flatness dB", &F::flatness_db, &R::flatness_db}, crest{"crest dB", &F::crest100_db, &R::crest100_db};
+  if (std::strcmp(group, "OTC_collage") == 0) return {centroid, rolloff, flatness, crest, corr, wobble};
   if (std::strcmp(stem_name, "guitar") == 0) return {centroid, rolloff, corr, wobble};
   if (std::strcmp(stem_name, "bass") == 0) return {centroid, rolloff};
   return {centroid, rolloff, wobble};
@@ -51,12 +55,12 @@ inline std::vector<Measure> measures(const char* stem_name) {
 
 inline std::string judge(const stem::Features& f, const stem::Reference& r) {
   std::string failures;
-  for (const Measure& m : measures(r.stem)) {
+  for (const Measure& m : measures(r.group, r.stem)) {
     const double v = f.*m.value;
     const stem::Stat& s = r.*m.stat;
-    if (v >= s.q25 && v <= s.q75) continue;
+    if (v >= s.lo && v <= s.hi) continue;
     char line[160];
-    std::snprintf(line, sizeof(line), "%s %.4g outside %.4g..%.4g (records' median %.4g); ", m.name, v, s.q25, s.q75, s.median);
+    std::snprintf(line, sizeof(line), "%s %.4g outside %.4g..%.4g (records' median %.4g); ", m.name, v, s.lo, s.hi, s.median);
     failures += line;
   }
   return failures;
@@ -65,11 +69,11 @@ inline std::string judge(const stem::Features& f, const stem::Reference& r) {
 // How far outside the quartiles, in interquartile ranges, with a light pull to the median: for tuning.
 inline double loss(const stem::Features& f, const stem::Reference& r) {
   double sum = 0.0;
-  for (const Measure& m : measures(r.stem)) {
+  for (const Measure& m : measures(r.group, r.stem)) {
     const double v = f.*m.value;
     const stem::Stat& s = r.*m.stat;
-    const double iqr = std::max(s.q75 - s.q25, 1e-6);
-    sum += 3.0 * (std::max(0.0, s.q25 - v) + std::max(0.0, v - s.q75)) / iqr + 0.15 * std::abs(v - s.median) / iqr;
+    const double iqr = std::max(s.hi - s.lo, 1e-6);
+    sum += 3.0 * (std::max(0.0, s.lo - v) + std::max(0.0, v - s.hi)) / iqr + 0.15 * std::abs(v - s.median) / iqr;
   }
   return sum;
 }

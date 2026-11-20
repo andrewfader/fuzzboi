@@ -29,7 +29,7 @@ Every page: [VOICE](docs/screenshots/page1.png), [ORGAN](docs/screenshots/page2.
 | Plastic piccolo | Odd-harmonic tone, breath, chiff, and tuning that wanders |
 | Stylophone | A single buzzy relaxation oscillator with the on/off vibrato |
 | Jangle 12-string | Extended Karplus-Strong string pairs (pick-position comb, strings that bend with the pitch, velocity-bright picks, an electric pickup or an acoustic body), octave strings below the B course |
-| Collage sampler | Sixteen slots across the keys, slices that jump and reverse, scatter, Optigan disc character; empty slots play built-in found sound |
+| Collage sampler | Sixteen slots across the keys, slices that jump and reverse, scatter, Optigan disc character; empty slots play built-in found sound, shortwave or home tape |
 | Physical guitar | A guitar simulated from its physics: a Martin-style steel dreadnought, a nylon classical, a Strat-style single-coil, a Les Paul-style humbucker and a Fender Bass VI an octave down, with D'Addario's real strings, equal-tempered frets, real action and a compensated saddle, eight tunings and a capo, stiff two-plane waveguide strings with fitted losses, tension glide on hard plucks, sympathetic strings, a modal body or magnetic pickups, and a guitarist's fingering, choke, hammer-ons and slides. See [docs/GUITAR.md](docs/GUITAR.md) |
 
 **The chord machine**: one key becomes a
@@ -49,7 +49,7 @@ ducking of the whole mix, echoes included), backwards, lo-fi, and the master tap
 (drive, wow, flutter, hiss, bandwidth, and up to six cassette-to-cassette generations), and an
 output limiter at -2 dBFS so every preset can sit at the same loudness (-16 LUFS momentary) whatever its crest factor.
 
-**A hundred and seventy-three presets**: from "Bright Vox organ" and "Electric jug" through
+**A hundred and seventy-four presets**: from "Bright Vox organ" and "Electric jug" through
 "Eight-theremin swarm", "Marimba-repeat organ", "Quarter-tone lead", "Polymoog strings", "Warbling
 tape collage" and "Space Echo dub" to the second round's "Pumping Juno pad", "Phased octave lead",
 "Pumping pluck bass", "Strummed maj 7 jangle", "Omnichord dream", "Strummed FM bells" and the sample
@@ -62,9 +62,9 @@ steel", "Nylon fingerstyle", "Clean neck single-coil", "Bridge-pickup twang", "H
 12-string ones playing their octave courses on a second real string through the Octaves chord, and forty
 more written for kinds of record ("4-track crunch (phys)", "Drone 12 (phys)", "Folk-rock chime (phys)",
 "Funk wah chops (phys)", "Casino delay arpeggio (phys)", "Freakbeat bender (phys)", ...), most of them held by
-`tone_gate_tests` to where the separated guitar stems of real records measure, and five for home-recorded
+`tone_gate_tests` to where the separated guitar stems of real records measure, and six for home-recorded
 psychedelic records ("Home-psych fuzz (phys)", "Home-taped round bass (phys)", "Home-psych singing saw",
-"Home-psych tape strings", "Home-psych tape choir") held with "4-track crunch (phys)" to where those records'
+"Home-psych tape strings", "Home-psych tape choir", "Home-psych tape collage") held with "4-track crunch (phys)" to where those records'
 guitar, bass and other stems measure, tape wobble included (see [docs/GUITAR.md](docs/GUITAR.md)). Every preset is measured against the [quality bar](docs/QUALITY.md) by
 `build/fuzzboi-preset-audit` and held to it by the test suite. Sixteen voices, poly/mono/legato,
 unison with stereo spread, sustain pedal, pitch bend, mod wheel vibrato, CLAP and MIDI note
@@ -120,7 +120,7 @@ hardware, installed plug-ins or the network.
 | `fx_tests` | each effect's advertised behaviour (echo tap times, tremolo rate, fuzz harmonics, ...) |
 | `engine_tests` | polyphony, mono/legato, unison, FM channel sharing, pedal, bend, tails, the chord machine and strum, every preset against the quality bar |
 | `air_tests` | the room and its air against the physics: speed of sound, ISO 9613-1 absorption, Sabine reverberation time, direct-to-reverberant ratio, wood moisture, string expansion |
-| `tone_gate_tests` | the physical presets written for kinds of record, measured as the reference corpus measured real records' guitar stems, and held inside each group's range; the lo-fi and home-psych presets measured as the six-stem corpus measures a guitar, bass or other stem (pYIN tape wobble in cents included) and held inside its quartiles; the master tape machine's flutter on any source |
+| `tone_gate_tests` | the physical presets written for kinds of record, measured as the reference corpus measured real records' guitar stems, and held inside each group's range; the lo-fi and home-psych presets measured as the six-stem corpus measures a guitar, bass or other stem (pYIN tape wobble in cents included) and held inside its quartiles, the tape collage inside the range of the records' collage passages; the master tape machine's flutter on any source; the home-tape found sounds' own wobble |
 | `guitar_tests` | the physical guitar: the maker's string data, every open string in every tuning by ear, intonation and saddle setbacks, measured stiffness stretch, partial decays, the pluck point's notch, tension glide, fingering and choke, damping and sympathetic strings, pickups and body, hammer-ons, stability |
 | `plugin_smoke`, `note_tests`, `state_tests` | the built `.clap` through the public CLAP ABI: discovery, ports, parameters, events at sample offsets, MIDI, presets, state round trips, malformed state |
 | `advertised_tests` | one proof per parameter from audio; fails if a parameter has no proof |
