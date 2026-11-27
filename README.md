@@ -150,6 +150,10 @@ the time of writing, excluding the platform window code, which needs a display).
     assets/samples/       the harvested sample bank and its manifest
     features/             Gherkin scenarios mapped to tests
 
+## See also
+
+The sibling CLAP instruments: [BONKR](https://github.com/andrewfader/bonkr) (drums and percussion from their physics), [HONKR](https://github.com/andrewfader/honkr) (wind instruments from their physics) and [SCHRODR](https://github.com/andrewfader/schrodr) (keyboard instruments from their physics).
+
 ## Licence
 
 See [LICENSE](LICENSE) (source-available) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
