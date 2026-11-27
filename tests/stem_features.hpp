@@ -38,16 +38,23 @@ namespace detail {
 constexpr double kPyinRate = 22050.0, kFmin = 65.0, kFmax = 1050.0;
 constexpr int kFrame = 2048, kHop = 256, kBinsPerSemitone = 10;
 
+// The modified Bessel function I0 by its power series (libc++ has no std::cyl_bessel_i).
+inline double bessel_i0(double x) {
+  double sum = 1.0, term = 1.0;
+  for (int k = 1; k < 64 && term > 1e-17 * sum; ++k) { term *= (x / (2.0 * k)) * (x / (2.0 * k)); sum += term; }
+  return sum;
+}
+
 // 44.1 kHz to 22.05 kHz: a Kaiser-windowed half-band low-pass, then every second sample.
 inline std::vector<double> halve_rate(const std::vector<double>& y) {
   constexpr int kHalf = 64;
   std::array<double, 2 * kHalf + 1> h{};
-  const double beta = 8.6, i0b = std::cyl_bessel_i(0.0, beta);
+  const double beta = 8.6, i0b = bessel_i0(beta);
   double sum = 0.0;
   for (int n = -kHalf; n <= kHalf; ++n) {
     const double x = 0.45 * n, sinc = n == 0 ? 1.0 : std::sin(fuzzboi::dsp::kPi * x) / (fuzzboi::dsp::kPi * x);
     const double r = static_cast<double>(n) / kHalf;
-    h[static_cast<size_t>(n + kHalf)] = 0.45 * sinc * std::cyl_bessel_i(0.0, beta * std::sqrt(1.0 - r * r)) / i0b;
+    h[static_cast<size_t>(n + kHalf)] = 0.45 * sinc * bessel_i0(beta * std::sqrt(1.0 - r * r)) / i0b;
     sum += h[static_cast<size_t>(n + kHalf)];
   }
   for (double& v : h) v /= sum;
