@@ -95,7 +95,7 @@ class Generations {
   static constexpr int kMax = 6;
   void prepare(double sample_rate) {
     rate_ = sample_rate;
-    for (auto& g : loss_) g.set(12000.0, sample_rate);
+    for (int g = 0; g < kMax; ++g) loss_[static_cast<size_t>(g)].set(12000.0 * std::pow(0.72, g), sample_rate);
     flutter_.prepare(sample_rate);
     line_.prepare(static_cast<size_t>(sample_rate * 0.01));
   }
@@ -107,8 +107,7 @@ class Generations {
     float x = in;
     for (int g = 0; g < n; ++g) {
       // Cassette duplication: ~10 kHz at first copy, falling faster with each pass.
-      loss_[g].set(12000.0 * std::pow(0.72, g), rate_);
-      x = loss_[g].low(warm_clip(x * 1.15f) * 0.9f);
+      x = loss_[static_cast<size_t>(g)].low(warm_clip(x * 1.15f) * 0.9f);
       // Each copy adds its own hiss: about -62 dBFS per generation, a decent home deck. The
       // master Hiss knob is there for a worse one.
       x += rng_.bipolar() * 0.0008f;

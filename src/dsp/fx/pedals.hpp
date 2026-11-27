@@ -90,7 +90,11 @@ class Fuzz {
     const float t = static_cast<float>(std::clamp(tone, 0.0, 1.0));
     float out = dark * (1.0f - t) + bright * t;
     if (mode == FuzzMode::Bender) out = out * 0.7f + x * 0.3f;
-    out = dc_.process(out) * static_cast<float>(db_to_gain(level_db)) * 0.9f;
+    if (level_db != last_level_db_) {
+      last_level_db_ = level_db;
+      level_gain_ = static_cast<float>(db_to_gain(level_db)) * 0.9f;
+    }
+    out = dc_.process(out) * level_gain_;
     return in * static_cast<float>(1.0 - amount) + out * static_cast<float>(amount);
   }
  private:
@@ -110,7 +114,8 @@ class Fuzz {
     // Germanium transistor: the positive half clips sooner than the negative.
     return x > 0.0f ? 0.8f * std::tanh(x * 1.6f) : std::tanh(x * 0.9f);
   }
-  double rate_ = 48000.0;
+  double rate_ = 48000.0, last_level_db_ = 0.0;
+  float level_gain_ = 0.9f;
   OnePole input_hp_, tone_lp_, tone_hp_;
   std::array<OnePole, 2> stage_hp_{}, stage_lp_{};
   std::array<OnePole, 3> triode_hp_{};

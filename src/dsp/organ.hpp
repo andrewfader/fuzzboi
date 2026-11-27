@@ -64,9 +64,8 @@ class OrganVoice {
       // Each footage: a sine for the flute tab, a 50% pulse for the reed tab. Running the
       // oscillator once and deriving both from the phase keeps them locked.
       const double phase = oscillators_[i].phase();
-      const float sine = static_cast<float>(std::sin(kTau * phase));
+      const float sine = oscillators_[i].next(Wave::Sine, f, rate_);
       const float reed = pulse(phase, f / rate_, 0.5);
-      oscillators_[i].next(Wave::Sine, f, rate_);
       sum += static_cast<float>(level) * (sine * static_cast<float>(1.0 - s.reed) + reed * static_cast<float>(s.reed * 0.7));
     }
     // Key click: a short broadband burst, as the key contacts close.

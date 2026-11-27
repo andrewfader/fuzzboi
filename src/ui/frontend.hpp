@@ -247,11 +247,10 @@ class PluginEditorHost final : public fuzzboi::ui::EditorHost {
   void begin_edit(int id) override { gui_push(p_, GuiEvent::Begin, static_cast<clap_id>(id), 0); gui_request_flush(p_); }
   void edit(int id, double v) override {
     if (static_cast<clap_id>(id) == kPreset) {
-      apply_preset(p_, static_cast<int>(std::lround(v)));
+      apply_preset(p_, static_cast<int>(std::lround(clamp_to_spec(kPreset, v))));
     } else {
       set_param(p_, static_cast<clap_id>(id), v);
     }
-    snapshot_settings(p_);
     gui_push(p_, GuiEvent::Value, static_cast<clap_id>(id), value(id));
     gui_request_flush(p_);
   }

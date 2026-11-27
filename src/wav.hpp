@@ -3,6 +3,8 @@
 // without a library dependency.
 #pragma once
 
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -40,12 +42,14 @@ inline bool parse(const std::vector<uint8_t>& bytes, Audio& out, std::string* er
     } else if (!std::memcmp(bytes.data() + at, "data", 4)) {
       data = body; data_size = available;
     }
-    at += 8 + size + (size & 1);
+    const size_t step = 8 + static_cast<size_t>(size) + (size & 1u);
+    if (step > bytes.size() - at) break;
+    at += step;
   }
   if (!data || !channels || !rate) return fail("missing fmt or data chunk");
   const bool is_float = format == 3;
   if (!(format == 1 || is_float)) return fail("unsupported WAVE format tag");
-  if (!(bits == 8 || bits == 16 || bits == 24 || bits == 32)) return fail("unsupported bit depth");
+  if (is_float ? bits != 32 : !(bits == 8 || bits == 16 || bits == 24 || bits == 32)) return fail("unsupported bit depth");
   const size_t frame_bytes = static_cast<size_t>(channels) * bits / 8;
   const size_t frames = data_size / frame_bytes;
   out.mono.assign(frames, 0.0f);
@@ -59,7 +63,7 @@ inline bool parse(const std::vector<uint8_t>& bytes, Audio& out, std::string* er
       if (bits == 8) v = (static_cast<int>(s[0]) - 128) / 128.0;
       else if (bits == 16) v = static_cast<int16_t>(le16(s)) / 32768.0;
       else if (bits == 24) v = (static_cast<int32_t>((s[0] << 8) | (s[1] << 16) | (static_cast<uint32_t>(s[2]) << 24)) >> 8) / 8388608.0;
-      else if (is_float) { float x; std::memcpy(&x, s, 4); v = x; }
+      else if (is_float) { float x; std::memcpy(&x, s, 4); v = std::isfinite(x) ? x : 0.0; }
       else v = static_cast<int32_t>(le32(s)) / 2147483648.0;
       sum += v;
     }

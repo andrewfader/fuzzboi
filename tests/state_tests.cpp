@@ -144,6 +144,30 @@ SCENARIO(older_states_with_fewer_parameters_load_with_defaults) {
   a->destroy(a); b->destroy(b);
 }
 
+SCENARIO(truncated_sample_state_does_not_clobber_existing_parameters) {
+  GIVEN("an instance with a known parameter value and a saved state carrying a sample");
+  const std::filesystem::path dir = std::filesystem::temp_directory_path() / ("fuzzboi-state-atomic-" + std::to_string(test_platform::process_id()));
+  std::filesystem::create_directories(dir);
+  const std::filesystem::path wav = dir / "tone_C4.wav";
+  std::vector<float> tone(4096, 0.25f);
+  CHECK(fuzzboi::wav::write_file(wav.string().c_str(), {tone}, kRate), "fixture written");
+  test_platform::set_environment("FUZZBOI_SAMPLES", wav.string());
+  Library lib(g_path);
+  const clap_plugin_t* a = lib.create();
+  test_platform::unset_environment("FUZZBOI_SAMPLES");
+  set_param(a, P::kMasterDb, -15.0);
+  StateMemory saved;
+  CHECK(save_state(a, &saved), "save succeeds");
+  const clap_plugin_t* b = lib.create();
+  set_param(b, P::kMasterDb, -3.0);
+  WHEN("a state truncated mid-sample is loaded into b");
+  CHECK(!load_state(b, slice(saved, saved.bytes.size() - 500)), "truncated sample state refused");
+  THEN("b keeps its previous parameter value untouched");
+  CHECK(param(b, P::kMasterDb) == -3.0, "existing parameter preserved");
+  a->destroy(a); b->destroy(b);
+  std::filesystem::remove_all(dir);
+}
+
 int main(int argc, char** argv) {
   if (argc < 2) { std::fprintf(stderr, "usage: state_tests <FUZZBOI.clap> [filter]\n"); return 2; }
   g_path = argv[1];

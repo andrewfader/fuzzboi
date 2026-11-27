@@ -14,8 +14,10 @@ class Adsr {
  public:
   enum class Stage { Idle, Attack, Decay, Sustain, Release };
 
-  void prepare(double sample_rate) { rate_ = sample_rate; }
+  void prepare(double sample_rate) { rate_ = sample_rate; set_cached_ = false; }
   void set(double attack_ms, double decay_ms, double sustain, double release_ms) {
+    if (set_cached_ && attack_ms == last_a_ && decay_ms == last_d_ && sustain == last_s_ && release_ms == last_r_) return;
+    last_a_ = attack_ms; last_d_ = decay_ms; last_s_ = sustain; last_r_ = release_ms; set_cached_ = true;
     attack_ = attack_coefficient(attack_ms); decay_ = coefficient(decay_ms); release_ = coefficient(release_ms);
     sustain_ = std::clamp(sustain, 0.0, 1.0);
     attack_instant_ = attack_ms <= 0.0;
@@ -65,7 +67,8 @@ class Adsr {
     return 1.0 - std::exp(-std::log(1.3 / 0.3) / samples);
   }
   double rate_ = 48000.0, attack_ = 1.0, decay_ = 1.0, release_ = 1.0, sustain_ = 1.0, level_ = 0.0;
-  bool attack_instant_ = false;
+  double last_a_ = 0.0, last_d_ = 0.0, last_s_ = 0.0, last_r_ = 0.0;
+  bool attack_instant_ = false, set_cached_ = false;
   Stage stage_ = Stage::Idle;
 };
 

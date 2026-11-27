@@ -163,6 +163,16 @@ class Room {
   // The Sabine reverberation time (s) at 500 Hz and 8 kHz, for the tail and for the tests.
   double rt60_low() const { return rt60_low_; }
   double rt60_high() const { return rt60_high_; }
+  // Allocation-free Sabine RT60 estimate for a room setting, safe to call from the audio thread.
+  static double sabine_rt60(const Settings& s, double hz) {
+    if (s.volume_m3 <= 0.0) return 0.0;
+    const double a = std::cbrt(s.volume_m3 / (1.0 * 1.4 * 1.9));
+    const double sx = 1.9 * a, sy = 1.4 * a, sz = a;
+    const double surface = 2.0 * (sx * sy + sx * sz + sy * sz);
+    const double alpha = std::clamp(s.absorption, 0.01, 0.99);
+    const double m = absorption_db_per_m(hz, s.celsius, s.humidity) / 4.343;
+    return 0.161 * s.volume_m3 / (surface * alpha + 4.0 * m * s.volume_m3);
+  }
   // How far the microphone actually is from the source: what was asked for, unless the far wall
   // is nearer.
   double reach_m() const { return reach_; }
@@ -194,7 +204,7 @@ class Room {
     const double a = std::cbrt(s.volume_m3 / (1.0 * 1.4 * 1.9));
     const std::array<double, 3> size{1.9 * a, 1.4 * a, a};
     const std::array<double, 3> src{0.25 * size[0], 0.43 * size[1], std::min(1.0, 0.45 * size[2])};
-    const double reach = std::min(distance, 0.9 * (size[0] - src[0]) - 0.3);
+    const double reach = std::max(0.02, std::min(distance, 0.9 * (size[0] - src[0]) - 0.3));
     const std::array<double, 3> mic{src[0] + reach, src[1], src[2]};
     reach_ = reach;
     const double surface = 2.0 * (size[0] * size[1] + size[0] * size[2] + size[1] * size[2]);

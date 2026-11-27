@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <set>
 #include <vector>
 #include <string>
@@ -153,6 +154,24 @@ SCENARIO(a_reset_instance_plays_a_phrase_as_it_did_the_first_time) {
   for (size_t i = 0; alike && i < first.size(); ++i)
     alike = std::abs(first[i] - second[i]) <= 1e-2 * std::max(first[i], 1e-6);
   CHECK(alike, "a reset instance plays like a fresh one");
+  run.destroy();
+}
+
+SCENARIO(host_edge_cases_and_non_finite_events_are_handled_safely) {
+  GIVEN("an activated instance");
+  Library lib(g_path);
+  const clap_plugin_t* plugin = lib.create();
+  THEN("null extension ids and null process structs are refused cleanly");
+  CHECK(plugin->get_extension(plugin, nullptr) == nullptr, "null extension id refused");
+  CHECK(plugin->process(plugin, nullptr) == CLAP_PROCESS_ERROR, "null process refused");
+  WHEN("a note-on with NaN velocity and a preset param event with NaN arrive");
+  Runner run(plugin, 48000.0, 256);
+  Events events;
+  events.push(note_event(CLAP_EVENT_NOTE_ON, 0, 60, -1, std::numeric_limits<double>::quiet_NaN()));
+  events.push(param_event(fuzzboi::params::kPreset, std::numeric_limits<double>::quiet_NaN()));
+  const Block out = run.run(&events);
+  THEN("processing succeeds and output stays finite");
+  CHECK(out.finite, "finite output after NaN events");
   run.destroy();
 }
 

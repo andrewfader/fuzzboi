@@ -125,6 +125,8 @@ class Voice {
   // Released while the sustain pedal holds it.
   bool sustained() const { return sustained_; }
   double pan() const { return pan_; }
+  float pan_left() const { return pan_l_; }
+  float pan_right() const { return pan_r_; }
 
   struct Start {
     int16_t channel; int key; int32_t note_id; double velocity; uint64_t age;
@@ -139,10 +141,14 @@ class Voice {
     const bool legato = in.legato && active_;
     channel_ = in.channel; note_ = in.key; note_id_ = in.note_id; velocity_ = in.velocity; age_ = in.age;
     detune_cents_ = in.detune_cents; pan_ = in.pan; fm_channel_ = in.fm_channel;
+    const double pan_angle = (pan_ * 0.5 + 0.5) * dsp::kPi * 0.5;
+    pan_l_ = static_cast<float>(std::cos(pan_angle));
+    pan_r_ = static_cast<float>(std::sin(pan_angle));
     trigger_ = in.trigger >= 0 ? in.trigger : in.key; gain_ = in.gain;
     guitar_string_ = in.guitar_string; guitar_note_ = in.guitar_note; pitch_ratio_ = 1.0;
     held_ = true; active_ = true; sustained_ = false; samples_ = 0;
     source_ = s.source();
+    source_gain_ = levels::gain(levels::kSourceDb, source_);
     const double hz = dsp::midi_to_hz(in.key);
     if (!legato) glide_.snap(hz);
     glide_.target(hz);
@@ -198,11 +204,10 @@ class Voice {
     const double vib_cents = (s[params::kVibratoDepth] * vib_ramp + wheel * 60.0) * vibrato_.next(s[params::kVibratoRate]);
     const double hz = glide_.next() * std::exp2((s[params::kTranspose] + bend) / 12.0) *
                       dsp::cents_ratio(s[params::kFineCents] + detune_cents_ + vib_cents);
-    const double note = dsp::hz_to_midi(hz);
     float out = 0.0f;
     switch (source_) {
       case params::kSourceOrgan: out = organ_.next(organ_settings(s), hz); break;
-      case params::kSourceSynth: out = synth_.next(synth_settings(s), hz, note); break;
+      case params::kSourceSynth: out = synth_.next(synth_settings(s), hz, dsp::hz_to_midi(hz)); break;
       case params::kSourceFm: out = 0.0f; break;  // rendered by the chip, mixed by the engine
       case params::kSourceGuitar:  // the strings are the engine's; the voice steers its string's pitch
         pitch_ratio_ = hz / dsp::midi_to_hz(note_ + s[params::kTranspose]);
@@ -223,7 +228,7 @@ class Voice {
       default: break;
     }
     const double velocity_gain = 1.0 - s[params::kVelocitySens] * (1.0 - velocity_);
-    return out * static_cast<float>(env * velocity_gain * gain_ * levels::gain(levels::kSourceDb, source_));
+    return out * static_cast<float>(env * velocity_gain * gain_ * source_gain_);
   }
 
   // Settings adapters: the parameter table to each model's own struct.
@@ -291,7 +296,8 @@ class Voice {
   int16_t channel_ = 0;
   int note_ = -1, trigger_ = -1;
   int32_t note_id_ = -1;
-  double velocity_ = 1.0, detune_cents_ = 0.0, pan_ = 0.0, gain_ = 1.0;
+  double velocity_ = 1.0, detune_cents_ = 0.0, pan_ = 0.0, gain_ = 1.0, source_gain_ = 1.0;
+  float pan_l_ = 0.70710678f, pan_r_ = 0.70710678f;
   uint64_t age_ = 0, samples_ = 0;
   int source_ = 0, fm_channel_ = -1, guitar_string_ = -1, guitar_note_ = -1;
   double pitch_ratio_ = 1.0;
@@ -453,7 +459,12 @@ class Engine {
         default: break;
       }
     }
-    std::sort(notes, notes + n);
+    for (int i = 1; i < n; ++i) {
+      const int v = notes[i];
+      int j = i;
+      while (j > 0 && notes[j - 1] > v) { notes[j] = notes[j - 1]; --j; }
+      notes[j] = v;
+    }
     int written = 0;
     for (int i = 0; i < n; ++i) if (notes[i] >= 0 && notes[i] <= 127) out[written++] = notes[i];
     return std::max(written, 1);
@@ -626,9 +637,8 @@ class Engine {
         const float mono = v.render(s, bend_[ch] * bend_range, wheel_[ch], tempo_);
         if (v.guitar_string() >= 0) guitar_.set_ratio(v.guitar_string(), v.pitch_ratio());
         // Constant-power pan from the unison spread.
-        const double angle = (v.pan() * 0.5 + 0.5) * dsp::kPi * 0.5;
-        l += mono * static_cast<float>(std::cos(angle));
-        r += mono * static_cast<float>(std::sin(angle));
+        l += mono * v.pan_left();
+        r += mono * v.pan_right();
       }
       // The FM chip renders all its channels at once; voices only drive its registers.
       const float fm_out = fm_.render() * fm_trim;
@@ -771,10 +781,7 @@ class Engine {
     }
     if (s[params::kSpringMix] > 0.0) seconds += 3.0;
     if (s[params::kRoomSize] >= 1.0) {
-      dsp::air::Room probe;
-      probe.prepare(1000.0);
-      probe.configure(room_settings(s));
-      seconds += probe.rt60_low() + 0.6;
+      seconds += dsp::air::Room::sabine_rt60(room_settings(s), 500.0) + 0.6;
     }
     if (s[params::kVerbMix] > 0.0 || s[params::kWall] > 0.0) seconds += 2.0 + 8.0 * s[params::kVerbSize] + 6.0 * s[params::kVerbShimmer];
     if (s[params::kBackwardsMix] > 0.0) seconds += 2.0 * s[params::kBackwardsChunk] * 0.001;

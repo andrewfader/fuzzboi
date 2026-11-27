@@ -43,7 +43,7 @@ class Backwards {
     fade_.set(300.0, sample_rate);
   }
   float process(float in, double mix, double chunk_ms) {
-    if (mix <= 0.0 && !ever_on_) return in;
+    if (buffer_.empty() || (mix <= 0.0 && !ever_on_)) return in;
     ever_on_ = true;
     const size_t wanted = std::clamp(static_cast<size_t>(chunk_ms * 0.001 * rate_), static_cast<size_t>(64), buffer_.size() / 2);
     // Two halves: write into one while reading the other backwards.
@@ -135,7 +135,7 @@ class FeedbackVoice {
 class Pump {
  public:
   void prepare(double sample_rate) {
-    rate_ = sample_rate; phase_ = 0.0; envelope_ = 0.0; gain_ = 1.0;
+    rate_ = sample_rate; phase_ = 0.0; envelope_ = 0.0; gain_ = 1.0; last_period_ = -1.0;
     // The duck's edge is smoothed over about 1 ms so it never clicks.
     smoothing_ = 1.0 - std::exp(-kTau * 250.0 / sample_rate);
   }
@@ -145,10 +145,14 @@ class Pump {
   // (one clock serves both channels). At zero depth the gain is exactly one.
   float gain(double depth, double period_s) {
     const double period = std::max(0.02, period_s);
+    if (period != last_period_) {
+      last_period_ = period;
+      decay_ = std::exp(-6.9 / (0.6 * period * rate_));
+    }
     phase_ += 1.0 / (period * rate_);
     if (phase_ >= 1.0) { phase_ -= std::floor(phase_); envelope_ = 1.0; }
     // Recover over about 60% of the beat (time to fall 60 dB), the classic slow-release setting.
-    envelope_ *= std::exp(-6.9 / (0.6 * period * rate_));
+    envelope_ *= decay_;
     if (depth <= 0.0) { gain_ = 1.0; return 1.0f; }
     gain_ += (1.0 - std::clamp(depth, 0.0, 1.0) * envelope_ - gain_) * smoothing_;
     return static_cast<float>(gain_);
@@ -156,6 +160,7 @@ class Pump {
   float process(float in, double depth, double period_s) { return in * gain(depth, period_s); }
  private:
   double rate_ = 48000.0, phase_ = 0.0, envelope_ = 0.0, gain_ = 1.0, smoothing_ = 0.03;
+  double last_period_ = -1.0, decay_ = 1.0;
 };
 
 // The master tape machine: a TapePath for drive, loss and hiss, wow and flutter on a short

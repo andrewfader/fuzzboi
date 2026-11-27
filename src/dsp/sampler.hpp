@@ -61,25 +61,31 @@ class SamplerVoice {
     if (!sample_ || sample_->frames.empty() || done_) return 0.0f;
     const Sample& smp = *sample_;
     const size_t end = smp.end();
-    double ratio = (hz / smp.root_hz) * (smp.rate / rate_) * std::exp2(s.varispeed_semitones / 12.0);
+    double ratio = (hz / std::max(1.0, smp.root_hz)) * (smp.rate / rate_) * std::exp2(s.varispeed_semitones / 12.0);
     if (s.optigan > 0.0) ratio *= flutter_.next(0.6 * s.optigan, 0.8 * s.optigan);
     if (collage) {
       slice_left_ -= 1.0;
       if (slice_left_ <= 0.0) { slice_left_ = std::max(1.0, s.slice_ms * 0.001 * rate_); roll(s); }
     }
     // Linear interpolation between the two neighbouring frames.
-    const size_t i0 = static_cast<size_t>(std::floor(position_));
+    const double clamped_pos = std::clamp(position_, 0.0, static_cast<double>(end - 1));
+    const size_t i0 = static_cast<size_t>(std::floor(clamped_pos));
     const size_t i1 = std::min(i0 + 1, end - 1);
-    const float frac = static_cast<float>(position_ - static_cast<double>(i0));
-    float out = smp.frames[std::min(i0, end - 1)] * (1.0f - frac) + smp.frames[i1] * frac;
+    const float frac = static_cast<float>(clamped_pos - static_cast<double>(i0));
+    float out = smp.frames[i0] * (1.0f - frac) + smp.frames[i1] * frac;
     position_ += reverse_ ? -ratio : ratio;
     const double loop_start = static_cast<double>(std::min(smp.loop_start, end - 1));
-    if (position_ >= static_cast<double>(end)) {
-      if (s.loop) position_ = loop_start + (position_ - static_cast<double>(end));
+    const double loop_end = static_cast<double>(end);
+    const double loop_len = std::max(1.0, loop_end - loop_start);
+    if (position_ >= loop_end) {
+      if (s.loop) position_ = loop_start + std::fmod(position_ - loop_start, loop_len);
       else done_ = true;
     } else if (position_ < loop_start) {
-      if (reverse_ && s.loop) position_ = static_cast<double>(end) - 1.0 - (loop_start - position_);
-      else if (reverse_) done_ = true;
+      if (reverse_ && s.loop) {
+        const double rem = std::fmod(loop_start - position_, loop_len);
+        position_ = rem > 0.0 ? loop_end - rem : loop_start;
+        if (position_ >= loop_end) position_ = loop_start;
+      } else if (reverse_) done_ = true;
       else position_ = loop_start;
     }
     if (s.optigan > 0.0) {

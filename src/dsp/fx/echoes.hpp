@@ -28,6 +28,7 @@ class TapeEcho {
     line_.prepare(static_cast<size_t>(sample_rate * kMaxSeconds) + 8);
     speed_.prepare(sample_rate);
     loss_.set(6000.0, sample_rate);
+    last_age_ = -1.0;
     hp_.set(90.0, sample_rate);
     time_.set_time(80.0, sample_rate);
     time_.snap(0.38);
@@ -52,7 +53,10 @@ class TapeEcho {
     // saturation is normalised so a quiet repeat still loses exactly `feedback` per pass: the
     // knob is the loop gain, and the drive only compresses loud repeats. (Without that, 75%
     // feedback with the preamp hot looped above unity and the echo never ended.)
-    loss_.set(9000.0 * std::pow(0.25, age), rate_);
+    if (age != last_age_) {
+      last_age_ = age;
+      loss_.set(9000.0 * std::pow(0.25, age), rate_);
+    }
     const float drive = static_cast<float>(1.0 + 2.0 * saturate);
     const float hot = heard * static_cast<float>(feedback) * drive;
     float back = warm_clip(hot) / drive;
@@ -62,7 +66,7 @@ class TapeEcho {
     return in * static_cast<float>(1.0 - mix) + heard * static_cast<float>(mix);
   }
  private:
-  double rate_ = 48000.0;
+  double rate_ = 48000.0, last_age_ = -1.0;
   DelayLine line_;
   WowFlutter speed_;
   OnePole loss_, hp_;

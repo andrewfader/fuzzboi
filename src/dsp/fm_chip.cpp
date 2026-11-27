@@ -62,6 +62,7 @@ struct FmChip::Impl : ymfm::ymfm_interface {
   std::unique_ptr<ymfm::ym2151> chip;
   double host_rate = 48000.0, chip_rate = 55930.0, accumulator = 0.0;
   float last = 0.0f, previous = 0.0f;
+  bool ever_keyed = false;
   std::array<bool, kChannels> keyed{};
   std::array<int, kChannels> last_kc{}, last_kf{};
   FmControls controls{};
@@ -134,6 +135,7 @@ void FmChip::reset() {
   impl_->last_kf.fill(-1);
   impl_->accumulator = 0.0;
   impl_->last = impl_->previous = 0.0f;
+  impl_->ever_keyed = false;
   impl_->program_global(impl_->controls);
   for (int ch = 0; ch < kChannels; ++ch) impl_->program(ch, impl_->controls);
 }
@@ -147,6 +149,7 @@ void FmChip::note_on(int channel, double hz, const FmControls& controls) {
   impl_->pitch(channel, hz);
   impl_->write(0x08, static_cast<uint8_t>(0x78 | channel));
   impl_->keyed[static_cast<size_t>(channel)] = true;
+  impl_->ever_keyed = true;
 }
 
 void FmChip::note_off(int channel) {
@@ -173,7 +176,7 @@ bool FmChip::any_keyed() const {
 }
 
 float FmChip::render() {
-  if (!impl_->chip) return 0.0f;
+  if (!impl_->chip || !impl_->ever_keyed) return 0.0f;
   // The chip runs at its own rate; step it as many times as the host sample spans and
   // interpolate between the last two chip samples.
   impl_->accumulator += impl_->chip_rate / impl_->host_rate;

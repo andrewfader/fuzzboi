@@ -78,6 +78,8 @@ class DcBlocker {
 class Smoother {
  public:
   void set_time(double time_ms, double sample_rate) {
+    if (time_ms == last_time_ms_ && sample_rate == last_rate_) return;
+    last_time_ms_ = time_ms; last_rate_ = sample_rate;
     coefficient_ = time_ms <= 0.0 ? 1.0 : 1.0 - std::exp(-1000.0 / (time_ms * sample_rate));
   }
   void snap(double value) { value_ = target_ = value; }
@@ -87,6 +89,7 @@ class Smoother {
   bool settled(double tolerance = 1e-6) const { return std::abs(value_ - target_) <= tolerance; }
  private:
   double coefficient_ = 1.0, value_ = 0.0, target_ = 0.0;
+  double last_time_ms_ = -1.0, last_rate_ = 0.0;
 };
 
 // A circular buffer read at a fractional delay with linear interpolation. The size is fixed at

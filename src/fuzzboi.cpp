@@ -178,7 +178,8 @@ double root_hz_from_name(const std::string& stem) {
 
 std::shared_ptr<const dsp::Sample> load_sample_file(const std::string& path) {
   wav::Audio audio;
-  if (!wav::read_file(path.c_str(), audio) || audio.mono.empty()) return nullptr;
+  if (!wav::read_file(path.c_str(), audio) || audio.mono.empty() || !std::isfinite(audio.rate) ||
+      audio.rate < 1000.0 || audio.rate > 384000.0) return nullptr;
   auto sample = std::make_shared<dsp::Sample>();
   if (audio.mono.size() > kMaxSampleFrames) audio.mono.resize(kMaxSampleFrames);
   sample->frames = std::move(audio.mono);
@@ -264,11 +265,17 @@ void emit_gui_events(Plugin* p, const clap_output_events_t* out) {
   p->gui_read.store(read, std::memory_order_release);
 }
 
-void snapshot_settings(Plugin* p) {
+Settings read_settings(const Plugin* p) {
+  Settings s;
   for (size_t i = 0; i < kParamCount; ++i) {
     const double base = p->params[i].load(std::memory_order_relaxed) + p->modulation[i].load(std::memory_order_relaxed);
-    p->settings.v[i] = clamp_to_spec(static_cast<uint32_t>(i), base);
+    s.v[i] = clamp_to_spec(static_cast<uint32_t>(i), base);
   }
+  return s;
+}
+
+void snapshot_settings(Plugin* p) {
+  p->settings = read_settings(p);
 }
 
 void handle_event(Plugin* p, const clap_event_header_t* ev) {
@@ -277,7 +284,8 @@ void handle_event(Plugin* p, const clap_event_header_t* ev) {
     case CLAP_EVENT_NOTE_ON: {
       const auto* n = reinterpret_cast<const clap_event_note_t*>(ev);
       if (n->key < 0 || n->key > 127) return;
-      p->engine.note_on(p->settings, std::max<int16_t>(0, n->channel), n->key, n->note_id, std::clamp(n->velocity, 0.0, 1.0));
+      const double vel = std::isfinite(n->velocity) ? std::clamp(n->velocity, 0.0, 1.0) : 0.0;
+      p->engine.note_on(p->settings, std::max<int16_t>(0, n->channel), n->key, n->note_id, vel);
       return;
     }
     case CLAP_EVENT_NOTE_OFF: {
@@ -290,9 +298,10 @@ void handle_event(Plugin* p, const clap_event_header_t* ev) {
       const auto* v = reinterpret_cast<const clap_event_param_value_t*>(ev);
       if (v->param_id >= kParamCount) return;
       if (v->param_id == kPreset) {
-        const int index = static_cast<int>(std::lround(v->value));
+        const double clamped = clamp_to_spec(kPreset, v->value);
+        const int index = static_cast<int>(std::lround(clamped));
         if (index != static_cast<int>(std::lround(param_value(p, kPreset)))) apply_preset(p, index);
-        else set_param(p, kPreset, v->value);
+        else set_param(p, kPreset, clamped);
         snapshot_settings(p);
         return;
       }
@@ -388,13 +397,13 @@ void plugin_reset(const clap_plugin_t* plugin) {
 
 clap_process_status plugin_process(const clap_plugin_t* plugin, const clap_process_t* process) {
   auto* p = self(plugin);
-  if (process->audio_outputs_count == 0 || !process->audio_outputs[0].data32) return CLAP_PROCESS_ERROR;
+  if (!process || process->audio_outputs_count == 0 || !process->audio_outputs || !process->audio_outputs[0].data32) return CLAP_PROCESS_ERROR;
   auto& out = process->audio_outputs[0];
   if (out.channel_count < 2 || !out.data32[0] || !out.data32[1]) return CLAP_PROCESS_ERROR;
   if (process->transport && (process->transport->flags & CLAP_TRANSPORT_HAS_TEMPO)) p->engine.set_tempo(process->transport->tempo);
   snapshot_settings(p);
   const clap_input_events_t* in = process->in_events;
-  const uint32_t count = in ? in->size(in) : 0;
+  const uint32_t count = (in && in->size && in->get) ? in->size(in) : 0;
   uint32_t next_event = 0, frame = 0;
   const uint32_t frames = process->frames_count;
   float* left = out.data32[0];
@@ -486,7 +495,7 @@ bool text_to_value(const clap_plugin_t*, clap_id id, const char* text, double* v
 }
 void params_flush(const clap_plugin_t* plugin, const clap_input_events_t* in, const clap_output_events_t* out) {
   auto* p = self(plugin);
-  if (in) for (uint32_t i = 0; i < in->size(in); ++i) handle_event(p, in->get(in, i));
+  if (in && in->size && in->get) for (uint32_t i = 0; i < in->size(in); ++i) handle_event(p, in->get(in, i));
   emit_gui_events(p, out);
 }
 const clap_plugin_params_t kParams{params_count, params_info, params_value, value_to_text, text_to_value, params_flush};
@@ -540,7 +549,10 @@ bool state_save(const clap_plugin_t* plugin, const clap_ostream_t* stream) {
     if (!write_all(stream, &slot_index, 1) || !write_all(stream, &name_size, 1) || !write_all(stream, sample->name.data(), name_size) ||
         !write_all(stream, &rate, 1) || !write_all(stream, &root, 1) || !write_all(stream, &frames, 1)) return false;
     std::vector<int16_t> pcm(frames);
-    for (uint32_t i = 0; i < frames; ++i) pcm[i] = static_cast<int16_t>(std::lround(std::clamp(sample->frames[i], -1.0f, 1.0f) * 32767.0f));
+    for (uint32_t i = 0; i < frames; ++i) {
+      const float x = std::isfinite(sample->frames[i]) ? std::clamp(sample->frames[i], -1.0f, 1.0f) : 0.0f;
+      pcm[i] = static_cast<int16_t>(std::lround(x * 32767.0f));
+    }
     if (!write_all(stream, pcm.data(), frames)) return false;
   }
   return true;
@@ -554,30 +566,32 @@ bool state_load(const clap_plugin_t* plugin, const clap_istream_t* stream) {
   if (header.magic != kStateMagic || header.version == 0 || header.version > kStateVersion) return false;
   if (header.param_count == 0 || header.param_count > 4096 || header.sample_count > static_cast<uint32_t>(kSampleSlots)) return false;
   // A newer file may carry more parameters than this build knows; older files fewer. Read what
-  // is there, keep the defaults for the rest.
+  // is there, keep the defaults for the rest. Parse everything before mutating plugin state so
+  // a corrupt or truncated stream never leaves partial state behind.
   std::vector<double> values(header.param_count);
   if (!read_all(stream, values.data(), header.param_count)) return false;
-  for (clap_id i = 0; i < kParamCount; ++i) {
-    const double v = i < header.param_count ? values[i] : kSpecs[i].def;
-    p->params[i].store(clamp_to_spec(i, v), std::memory_order_relaxed);
-  }
-  for (int slot = 0; slot < kSampleSlots; ++slot) p->engine.set_sample(slot, nullptr);
+  std::array<std::shared_ptr<const dsp::Sample>, kSampleSlots> loaded_samples{};
   for (uint32_t n = 0; n < header.sample_count; ++n) {
     uint32_t slot = 0, name_size = 0, frames = 0;
     double rate = 0.0, root = 0.0;
     if (!read_all(stream, &slot, 1) || !read_all(stream, &name_size, 1) || name_size > 255) return false;
     std::string name(name_size, '\0');
     if (!read_all(stream, name.data(), name_size) || !read_all(stream, &rate, 1) || !read_all(stream, &root, 1) || !read_all(stream, &frames, 1)) return false;
-    if (slot >= static_cast<uint32_t>(kSampleSlots) || frames > kMaxSampleFrames || !std::isfinite(rate) || rate < 1000.0 || rate > 384000.0 ||
+    if (slot >= static_cast<uint32_t>(kSampleSlots) || frames == 0 || frames > kMaxSampleFrames || !std::isfinite(rate) || rate < 1000.0 || rate > 384000.0 ||
         !std::isfinite(root) || root <= 0.0) return false;
     std::vector<int16_t> pcm(frames);
     if (!read_all(stream, pcm.data(), frames)) return false;
     auto sample = std::make_shared<dsp::Sample>();
-    sample->name = name; sample->rate = rate; sample->root_hz = root; sample->source = "project state";
+    sample->name = std::move(name); sample->rate = rate; sample->root_hz = root; sample->source = "project state";
     sample->frames.resize(frames);
     for (uint32_t i = 0; i < frames; ++i) sample->frames[i] = pcm[i] / 32768.0f;
-    p->engine.set_sample(static_cast<int>(slot), sample);
+    loaded_samples[static_cast<size_t>(slot)] = std::move(sample);
   }
+  for (clap_id i = 0; i < kParamCount; ++i) {
+    const double v = i < header.param_count ? values[i] : kSpecs[i].def;
+    p->params[i].store(clamp_to_spec(i, v), std::memory_order_relaxed);
+  }
+  for (int slot = 0; slot < kSampleSlots; ++slot) p->engine.set_sample(slot, std::move(loaded_samples[static_cast<size_t>(slot)]));
 #ifdef FUZZBOI_HAS_EDITOR
   if (header.gui_width >= static_cast<uint32_t>(fuzzboi::ui::minimum_width) && header.gui_height >= static_cast<uint32_t>(fuzzboi::ui::minimum_height) &&
       header.gui_width <= 8192 && header.gui_height <= 8192) {
@@ -585,7 +599,6 @@ bool state_load(const clap_plugin_t* plugin, const clap_istream_t* stream) {
   }
 #endif
   for (auto& m : p->modulation) m.store(0.0, std::memory_order_relaxed);
-  snapshot_settings(p);
   p->ui_revision.fetch_add(1, std::memory_order_release);
   p->params_rescan_pending.store(true, std::memory_order_release);
   if (p->initialized && p->host && p->host->request_callback) p->host->request_callback(p->host);
@@ -598,7 +611,7 @@ const clap_plugin_latency_t kLatency{latency_get};
 
 uint32_t tail_get(const clap_plugin_t* plugin) {
   auto* p = self(plugin);
-  return p->engine.tail_samples(p->settings);
+  return p->engine.tail_samples(read_settings(p));
 }
 const clap_plugin_tail_t kTail{tail_get};
 
@@ -617,6 +630,7 @@ const clap_plugin_voice_info_t kVoiceInfo{voice_info_get};
 #endif
 
 const void* get_extension(const clap_plugin_t*, const char* id) {
+  if (!id) return nullptr;
   if (!std::strcmp(id, CLAP_EXT_AUDIO_PORTS)) return &kAudioPorts;
   if (!std::strcmp(id, CLAP_EXT_NOTE_PORTS)) return &kNotePorts;
   if (!std::strcmp(id, CLAP_EXT_PARAMS)) return &kParams;

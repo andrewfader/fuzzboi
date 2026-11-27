@@ -1,13 +1,17 @@
 // Executable scenarios for features/dsp_building_blocks.feature: the oscillators, filters,
 // envelopes and helpers are proved by measuring what they output, in the units their
 // parameters are stated in.
+#include "../src/dsp/air.hpp"
 #include "../src/dsp/core.hpp"
 #include "../src/dsp/envelopes.hpp"
 #include "../src/dsp/filters.hpp"
 #include "../src/dsp/oscillators.hpp"
+#include "../src/dsp/sampler.hpp"
+#include "../src/wav.hpp"
 #include "audio_measure.hpp"
 #include "spec.hpp"
 
+#include <limits>
 #include <vector>
 
 using namespace fuzzboi::dsp;
@@ -216,6 +220,72 @@ SCENARIO(rng_is_deterministic_and_bounded) {
   THEN("they agree sample for sample and stay in range");
   CHECK(same, "deterministic");
   CHECK(bounded, "bounded");
+}
+
+SCENARIO(wav_parser_handles_malformed_chunks_and_non_finite_floats) {
+  GIVEN("a RIFF/WAVE with a chunk size that would wrap 32-bit unsigned arithmetic");
+  std::vector<uint8_t> wrap = {'R', 'I', 'F', 'F', 0, 0, 0, 0, 'W', 'A', 'V', 'E',
+                               'J', 'U', 'N', 'K', 0xf7, 0xff, 0xff, 0xff};
+  fuzzboi::wav::Audio audio;
+  std::string err;
+  THEN("parsing terminates and rejects it rather than looping forever");
+  CHECK(!fuzzboi::wav::parse(wrap, audio, &err), "32-bit chunk-size wrap rejected");
+
+  GIVEN("a 16-bit IEEE float WAVE (invalid bit depth for format 3)");
+  std::vector<uint8_t> bad_float = {
+      'R', 'I', 'F', 'F', 40, 0, 0, 0, 'W', 'A', 'V', 'E',
+      'f', 'm', 't', ' ', 16, 0, 0, 0, 3, 0, 1, 0, 0x80, 0xbb, 0, 0, 0, 0x77, 1, 0, 2, 0, 16, 0,
+      'd', 'a', 't', 'a', 4, 0, 0, 0, 0, 0, 0, 0};
+  CHECK(!fuzzboi::wav::parse(bad_float, audio, &err), "16-bit float rejected");
+
+  GIVEN("a 32-bit float WAVE containing NaN and +Inf samples");
+  std::vector<uint8_t> nan_float = {
+      'R', 'I', 'F', 'F', 48, 0, 0, 0, 'W', 'A', 'V', 'E',
+      'f', 'm', 't', ' ', 16, 0, 0, 0, 3, 0, 1, 0, 0x80, 0xbb, 0, 0, 0, 0xee, 2, 0, 4, 0, 32, 0,
+      'd', 'a', 't', 'a', 12, 0, 0, 0};
+  const float vals[3] = {std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::infinity(), 0.25f};
+  for (float v : vals) {
+    uint8_t b[4]; std::memcpy(b, &v, 4);
+    nan_float.insert(nan_float.end(), b, b + 4);
+  }
+  CHECK(fuzzboi::wav::parse(nan_float, audio, &err), "32-bit float parses");
+  CHECK(audio.mono.size() == 3 && audio.mono[0] == 0.0f && audio.mono[1] == 0.0f && audio.mono[2] == 0.25f,
+        "non-finite floats sanitised to zero");
+}
+
+SCENARIO(sampler_stays_in_bounds_on_short_reverse_loop) {
+  GIVEN("a 2-frame sample played in reverse at a high ratio");
+  auto smp = std::make_shared<Sample>();
+  smp->frames = {0.5f, -0.5f};
+  smp->rate = 96000.0;
+  smp->root_hz = 110.0;
+  SamplerVoice voice;
+  voice.prepare(kRate);
+  SamplerSettings s;
+  s.loop = true;
+  s.reverse_chance = 1.0;
+  s.varispeed_semitones = 12.0;
+  voice.note_on(smp, s, 1u);
+  bool all_finite = true;
+  for (int i = 0; i < 2000; ++i) {
+    const float y = voice.next(s, 3520.0, true);
+    all_finite = all_finite && std::isfinite(y) && std::abs(y) <= 1.0f;
+  }
+  THEN("every output sample is finite and bounded");
+  CHECK(all_finite, "reverse loop stays in bounds");
+}
+
+SCENARIO(room_sabine_rt60_matches_configured_room) {
+  GIVEN("a configured room");
+  air::Room::Settings s;
+  s.volume_m3 = 600.0;
+  s.absorption = 0.25;
+  s.distance_m = 2.0;
+  air::Room room;
+  room.prepare(kRate);
+  room.configure(s);
+  THEN("the allocation-free Sabine RT60 matches the room's low-frequency RT60");
+  CHECK_NEAR(air::Room::sabine_rt60(s, 500.0), room.rt60_low(), 1e-9, "sabine_rt60 matches");
 }
 
 int main(int argc, char** argv) { return spec::run(argc, argv); }
